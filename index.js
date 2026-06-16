@@ -159,12 +159,19 @@ Important generic rule:
 First-run behavior:
 
 1. State which of the three files are missing.
-2. Ask exactly one compact setup form for what to create/update and all project/workflow/action details.
+2. Ask one compact questionnaire using the \`question\` tool for what to create/update and all project/workflow/action details.
 3. Render proposed markdown for all three files.
 4. Ask for confirmation before writing.
 5. On confirmation, create \`${PARTS_DIR}\`, write all three files, validate they exist, and tell the user to restart OpenCode so \`/new-session\` is regenerated from the updated parts.
 
-The first field in the single setup form must ask what the user wants to create or update:
+Questionnaire interaction rule:
+
+- Use the \`question\` tool, not a plain console/text fill-in block, for the setup questionnaire.
+- Ask multiple questions in one \`question\` tool call when possible so the user sees the questionnaire/form UI.
+- For open text fields, provide short common options such as \`unknown/TBD\`, \`none\`, \`keep current\`, and rely on the tool's custom/type-your-own answer support for free text.
+- Do not print a markdown form and ask the user to fill it out unless the \`question\` tool is unavailable or fails.
+
+The first field in the questionnaire must ask what the user wants to create or update:
 
 - Full setup: project defaults + workflows + post-intake actions
 - Project defaults only
@@ -172,7 +179,7 @@ The first field in the single setup form must ask what the user wants to create 
 - Post-intake actions only
 - Review current setup without writing
 
-The same single setup form should also include:
+The same questionnaire should also include:
 
 - starter workflow set: blank/custom, general+pr-review+new-task, incident/release, other
 - source systems: Trello, Notion, Azure DevOps, Linear, GitHub, Bitbucket, mixed, none/unknown
@@ -268,24 +275,27 @@ If no workflow catalog exists, use a minimal fallback:
 - Ask what fields are required before starting.
 - Recommend running \`/setup-chat-workflows\` once.
 
-Step 1: infer or ask for workflow type, then ask exactly one compact intake form.
+Step 1: infer or ask for workflow type, then ask one compact intake questionnaire.
 
 - Use the workflow names from \`${paths.workflows}\`.
 - Do not assume fixed workflow names.
 - If $ARGUMENTS clearly matches a workflow's purpose, preselect that workflow.
 - Otherwise ask the user to choose from configured workflows, plus "other/custom".
 
-Step 2: ask only one form for the selected workflow's intake.
+Step 2: ask only one questionnaire for the selected workflow's intake.
 
-- The intake must be a single initial form. Do not ask a second follow-up form.
-- If the \`question\` tool cannot capture text fields, present one compact fillable form in a single assistant message and wait for one user reply. Do not split structured choices and text/context fields into separate turns.
-- Combine workflow selection, required structured questions, required input fields, useful optional context fields, and gate choices into that one form.
-- If a field is unknown, TBD, none, or skip, the user can mark it in the same form.
-- If $ARGUMENTS or project defaults already answer a field, prefill it in the same form or omit it if no confirmation is needed.
+- The intake must be a single initial questionnaire. Do not ask a second follow-up form.
+- Use the \`question\` tool, not a plain console/text fill-in block, for the intake questionnaire.
+- Ask multiple questions in one \`question\` tool call when possible so the user sees the questionnaire/form UI.
+- For open text fields, provide short common options such as \`unknown/TBD\`, \`none\`, \`skip\`, \`use supplied arguments\`, and rely on the tool's custom/type-your-own answer support for free text.
+- Do not print a markdown form and ask the user to fill it out unless the \`question\` tool is unavailable or fails.
+- Combine workflow selection, required structured questions, required input fields, useful optional context fields, and gate choices into that one questionnaire.
+- If a field is unknown, TBD, none, or skip, the user can mark it in the same questionnaire.
+- If $ARGUMENTS or project defaults already answer a field, prefill it in the same questionnaire or omit it if no confirmation is needed.
 - Treat fields named \`optional ...\`, \`open notes\`, \`known risks\`, \`review focus\`, \`validation expectations\`, or similar context fields as optional entries in the same form, not a reason for a second prompt.
 - Always allow unknown, TBD, none, or skip when the workflow allows explicit unknown/skip.
 - A workflow is ready to start only when its configured required subset has answers or the user explicitly marks missing items unknown/skip.
-- Keep intake minimal: ask the fewest questions needed to determine the workflow, source links, gates, and readiness. Do not ask a redundant second form just to collect optional context.
+- Keep intake minimal: ask the fewest questions needed to determine the workflow, source links, gates, and readiness. Do not ask a redundant second questionnaire just to collect optional context.
 
 Step 3: include post-intake actions / skills.
 
