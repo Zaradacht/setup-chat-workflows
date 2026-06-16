@@ -1,0 +1,30 @@
+{
+  "name": "opencode-workflow-intake",
+  "version": "0.1.0",
+  "description": "OpenCode plugin that adds modular workflow-aware /new-session and /setup-workflows commands backed by plug-and-play workflow files.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "examples/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "workflow",
+    "intake",
+    "slash-command",
+    "pr-review",
+    "task-management"
+  ],
+  "license": "MIT",
+  "author": "zerdest",
+  "oc-plugin": [
+    "config"
+  ]
+}
