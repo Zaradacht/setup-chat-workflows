@@ -87,7 +87,7 @@ function setupTree(paths) {
 \`\`\`text
 ${paths.dir}/
 ├── project.md
-│   ├── project label
+│   ├── project defaults
 │   ├── source systems
 │   ├── issue tracker / mirror behavior
 │   ├── external update defaults
@@ -96,9 +96,12 @@ ${paths.dir}/
 │
 └── workflows.md
     ├── workflow sections
-    ├── optional nested subworkflow sections
+    ├── required structured questions
+    ├── required input fields
+    ├── optional context fields
     ├── readiness/start gates
-    └── workflow-local post-run actions, usually ending with /deepwork
+    ├── optional nested subworkflows
+    └── workflow-local post-run actions (default to /deepwork)
 \`\`\`
 
 Files this command writes:
@@ -114,7 +117,7 @@ Considering optional prefill input:
 
 $ARGUMENTS
 
-Set up this project's structured chat workflows. Project defaults live in \`project.md\`; workflow definitions, subworkflows, readiness gates, and post-run actions live in \`workflows.md\`.
+Set up this project's structured chat workflows. The setup is modular and upgradeable: project defaults live in \`project.md\`; workflow definitions, nested subworkflows, readiness/start gates, and workflow-local post-run actions live in \`workflows.md\`.
 
 ${setupTree(paths)}
 
@@ -126,7 +129,7 @@ Rules:
 
 - There is no separate actions file. Put post-run actions directly in each workflow or subworkflow as \`post-run actions:\`.
 - Workflows may contain nested subworkflows using \`### <parent>/<subworkflow>\` sections or a \`subworkflows:\` field.
-- Every workflow should normally include \`/deepwork\` as the final post-run action unless explicitly disabled.
+- Every workflow should normally include \`/deepwork\` as the final post-run action unless explicitly disabled (\`post-run actions: none\`).
 - Do not assume workflows are named general/pr-review/new-task. Those are examples only.
 - Do not post external comments or status updates. This command only writes local chat-workflows files.
 
@@ -138,14 +141,20 @@ First-run behavior:
 4. Ask for confirmation before writing.
 5. On confirmation, create \`${paths.dir}\`, write both files, validate they exist, and tell the user to restart OpenCode so \`/start-session\` is regenerated from the updated files.
 
-The first questionnaire field must ask what the user wants to create or update:
+The first questionnaire field should ask what the user wants to create or update and include a starter workflow set:
 
-- Full setup: project defaults + workflows/subworkflows
+- Starter workflow set:
+  - blank/custom
+  - general+pr-review+new-task
+  - incident/release
+  - other
+
 - Project defaults only
 - Workflow definitions only
 - Review current setup without writing
 
-The questionnaire should include workflow names, optional subworkflows, required structured questions, required input fields, optional context fields, readiness/start gates, and post-run actions for each workflow/subworkflow.
+The questionnaire should include workflow names, optional subworkflows, required structured questions, required input fields, optional context fields, and readiness/start gates for each workflow/subworkflow.
+Post-run actions and skills should be modeled as a list, and should usually include an action ending in \`/deepwork\` unless explicitly disabled.
 
 Render proposed files using this shape:
 
@@ -183,6 +192,8 @@ Render proposed files using this shape:
 - parent workflow: <workflow-name>
 - purpose: <when to use this subworkflow>
 - inherited fields: <all | list>
+- optional context fields: <semicolon-separated list>
+- readiness/start gate: <when this subworkflow is ready to start>
 - post-run actions: <subworkflow-specific actions, usually ending with /deepwork>
 \`\`\`
 
@@ -229,14 +240,31 @@ Step 3: include workflow-defined post-run actions.
 
 - Read post-run actions from the selected workflow/subworkflow in \`${paths.workflows}\`; there is no separate actions file.
 - Do not run actions before confirmation.
-- Do not ask for a second confirmation after the user selects \`Confirm and start\`; the workflow brief confirmation is the only action confirmation.
-- If an action names a skill such as \`wf-pr_review\`, load/use that skill after confirmation.
-- If an action is \`/deepwork\`, load/use the \`deepwork\` skill or follow \`/deepwork\` behavior after the workflow-specific skill handoff. Every configured workflow should end with \`/deepwork\` unless explicitly disabled.
-- If full PR is selected, include \`pr-review-full-pr\` in post-run actions and load/use it after the main workflow skill and before \`/deepwork\`.
+- Do not ask for a second confirmation after the user chooses \`Start\`; the workflow brief confirmation is the only action confirmation.
+- If the workflow declares PR review modes, include these selectable modes and defaults:
+  - review-only
+  - review-and-fix
+  - review-plan-and-fix
+  - review-and-comment
+  - review-and-merge
+
+  If the user asks for fixes/comments/merge, default to the matching mode; otherwise default to \`review-only\`.
+
+- If the workflow declares review angles, include add/remove angle handling and suggested defaults:
+  - general
+  - source/scope
+  - code/regression
+  - validation/ops
+
+  Full PR reviews default to all angles; focused reviews should include requested focus plus adjacent necessary angles.
+
+- If an action names a skill such as \`wf-pr_review\`, load/use that skill after confirmation as a quiet handoff, without dumping skill content or long instructions into chat.
+- If an action is \`/deepwork\`, load/use the \`deepwork\` skill or follow \`/deepwork\` behavior after the workflow-specific skill handoff.
+- Workflows are expected to end with \`/deepwork\` unless \`post-run actions: none\` is explicitly configured.
 
 Render a concise workflow brief with workflow, subworkflow, readiness, source links, focus, gates, validation, defaults applied, external updates, post-run actions, and open notes.
 
-Then ask with the \`question\` tool: "Confirm this workflow brief and start?" Options: "Confirm and start", "Edit fields", "Cancel".
+Then ask with the \`question\` tool: "Start this workflow?" Options: "Start", "Edit fields", "Cancel".
 
 If confirmed and ready to start is yes, run configured post-run actions without any extra action-confirmation prompt, then continue the normal scheduler workflow.`;
 }

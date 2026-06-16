@@ -18,22 +18,22 @@ The plugin installs:
 1. Install the plugin.
 2. Restart OpenCode.
 3. Run `/setup-chat-workflows` once.
-4. Choose what to set up: project defaults, workflows, post-confirmation actions, or all of them.
+4. Choose what to set up: project defaults, workflows, post-run actions, or all of them.
 5. Restart OpenCode.
 6. Use `/start-session <what you want to do>`.
 
-`/start-session` first asks the user to choose one configured workflow, then asks that selected workflow's own questionnaire, shows a brief, and starts after confirmation.
+`/start-session` first asks the user to choose one configured workflow, then asks that selected workflow's own questionnaire, shows a brief, and starts after confirmation using `Start this workflow?`.
 
-Post-session setup actions are optional follow-ups for the selected workflow only. The bundled examples use workflow skill names such as `wf-general`, `wf-pr_review`, and `wf-new_task`.
+Session post-run actions are optional follow-ups for the selected workflow only. The bundled examples use workflow skill names such as `wf-general`, `wf-pr_review`, and `wf-new_task`, followed by `/deepwork`.
 
 ## Agent TL;DR
 
 - `/setup-chat-workflows` owns configuration. In managed workspaces it creates or updates `projects/.opencode/chat-workflows/project.md` and `workflows.md`.
-- Always ask what the user wants to edit first: full setup, project defaults only, workflow definitions only, workflow-local post-run actions, or review current setup.
+- Always ask what the user wants to edit first: starter set (`blank/custom`, `general+pr-review+new-task`, `incident/release`, `other`), project defaults only, workflow definitions only, post-run actions, or review current setup.
 - `/start-session` owns runtime session setup. It reads the configured workflow tree, asks a workflow-picker questionnaire first, then asks the selected workflow's own compact questionnaire, renders a brief, and waits for confirmation.
 - Do not combine workflow selection and workflow-specific questions into one form. After workflow selection, compact required structured questions, required text fields, optional context, and gates into that workflow's questionnaire. Do not print console fill-in blocks unless the `question` tool is unavailable or fails.
-- Post-session setup actions are scoped to the selected workflow. Apply the default action policy plus the matching `## <workflow-name>` section only. Never run all actions globally.
-- Do not run post-confirmation actions before the user confirms the workflow brief, and do not ask for a second action-confirmation prompt after the brief is confirmed.
+- Post-run actions are scoped to the selected workflow. Apply the matching `## <workflow-name>` section only. Never run all actions globally.
+- Do not run post-run actions before the user confirms the workflow brief, and do not ask for a second action-confirmation prompt after the workflow confirmation.
 
 ## Core lineage
 
@@ -56,7 +56,7 @@ This plugin lets a project define the required session setup subset per workflow
 
 Skills are best for known tasks: once the agent already knows what needs to happen, a skill provides the repeatable playbook for doing it.
 
-Chat workflows run one step earlier. They ask the right questions to collect context, scope, gates, and subworkflow choices before execution starts. After the workflow brief is confirmed, workflow-local post-run actions can hand off to the right skill, such as `wf-pr_review`, `wf-new_task`, or `/deepwork`.
+Chat workflows run one step earlier. They ask the right questions to collect context, scope, gates, and subworkflow choices before execution starts. After the workflow brief is confirmed, workflow-local post-run actions hand off internally to the right skill, such as `wf-pr_review`, `wf-new_task`, or `/deepwork`, without leaking full skill instructions into the chat.
 
 In short:
 
@@ -126,9 +126,10 @@ project workflow setup
 │   ├── any number of workflow sections
 │   ├── each workflow defines required structured questions
 │   ├── each workflow defines required input fields
+│   ├── optional context fields
 │   ├── each workflow defines readiness/start gates
 │   ├── optional nested subworkflow sections
-│   └── workflow-local post-run actions
+│   └── workflow-local post-run actions (typically ending in /deepwork)
 │
 └── output
     ├── write the chat-workflows files
@@ -144,7 +145,10 @@ It uses chatbot-style prompting, not a custom UI.
 
 It should first ask what you want to create or update:
 
-- full setup: project defaults + workflows + post-confirmation actions
+- blank/custom
+- general+pr-review+new-task
+- incident/release
+- other
 - project defaults only
 - workflow definitions only
 - workflow-local post-run actions
@@ -154,7 +158,10 @@ It should first ask what you want to create or update:
 
 It asks one compact setup form. The first field is what you want to create or update:
 
-- full setup: project defaults + workflows + post-confirmation actions
+- blank/custom
+- general+pr-review+new-task
+- incident/release
+- other
 - project defaults only
 - workflow definitions only
 - workflow-local post-run actions
@@ -168,7 +175,7 @@ The same form includes fields such as:
 - default language
 - starter workflow set: blank/custom, general+pr-review+new-task, incident/release, other
 - default start gate
-- workflow-local post-run action policy
+- workflow-local post-run actions
 - project label
 - default source systems / source URL guidance
 - default issue tracker project names or IDs
@@ -180,7 +187,7 @@ The same form includes fields such as:
 
 ### 2. Rendered proposed markdown
 
-It renders the proposed three files so the user can inspect them:
+It renders the proposed files so the user can inspect them:
 
 ```text
 projects/.opencode/chat-workflows/project.md
@@ -228,18 +235,27 @@ The package examples include these starter workflows:
 
 ### pr-review
 
-Asks the minimal PR-review-specific required subset:
+Asks the PR-review-specific required subset:
 
 - PR URL
-- source task/card link
-- source system
-- target branch
-- PR scope, such as full PR, PBI only, Dataform only, recipient alignment only, notification/email behavior only, pipeline dependency only, docs/config only, or other
-- review depth/pass
-- merge expectation
-- external update expectation
+- review mode (`review-only`, `review-and-fix`, `review-plan-and-fix`, `review-and-comment`, `review-and-merge`)
+- review angles (`general`, `source/scope`, `code/regression`, `validation/ops`)
+- source task/card/work-item link or explicit none
+- target branch unless defaulted
+- review scope (full PR or focused review free text)
+- files to review
+- additional files to include
+- merge expectation unless defaulted
+- external update expectation unless defaulted
 
-Optional context such as review focus, known risks, validation notes, and open notes should not trigger a second prompt unless the workflow explicitly marks those fields as required.
+Default behavior:
+
+- No explicit user request for fixes/comments/merge defaults to `review-only`.
+- `full PR` or `focused review` controls default review-angle selection in the workflow implementation.
+- Full PR typically selects all relevant angles.
+- Focused reviews should include requested focus plus adjacent necessary angles.
+
+Optional context such as known risks, validation notes, and open notes should not trigger a second prompt unless the workflow explicitly marks those fields as required.
 
 ### new-task
 
@@ -263,24 +279,22 @@ Each workflow can define post-run actions directly in `workflows.md`: optional n
 
 They are not setup-time actions. They are workflow-specific handoffs such as:
 
-- for `general`: load/use the `wf-general` skill, then run `/deepwork` after session confirmation
-- for `new-task`: load/use the `wf-new_task` skill, then run `/deepwork` after session confirmation
-- for `pr-review`: load/use the `wf-pr_review` skill, then run `/deepwork` after session confirmation
-- for `incident`: suggest an incident-debugging checklist after session confirmation
+- for `general`: load/use the `wf-general` skill, then run `/deepwork` after workflow confirmation
+- for `new-task`: load/use the `wf-new_task` skill, then run `/deepwork` after workflow confirmation
+- for `pr-review`: load/use the `wf-pr_review` skill, then run `/deepwork` after workflow confirmation
+- for `incident`: suggest an incident-debugging checklist after workflow confirmation
 
 Examples:
 
 ```markdown
-- workflow-local post-run action policy: run after confirmation
-- post-run actions: /your-planning-command, then /deepwork after session confirmation
+- post-run actions: /your-planning-command, then /deepwork
 ```
 
 Rules:
 
 - `/start-session` includes these actions in the rendered workflow brief.
 - It does not run them before confirmation.
-- If policy is `suggest only`, it asks whether to run them.
-- If policy is `run after confirmation`, it runs them only after the user selects `Confirm and start`.
+- The default expectation is to run them after confirmation.
 
 ### Example: planning action for new-task
 
@@ -294,7 +308,7 @@ For a project that should suggest a planning command for new tasks:
 - required input fields: goal; milestones to confirm; scope boundaries; validation expectations; open notes
 - default review depth/pass: strong/4-pass for risky work
 - start gate: do not start implementation until goal, milestones, and gates are answered or explicitly marked unknown/skip by the user
-- post-run actions: /your-planning-command, then /deepwork after session confirmation
+- post-run actions: /your-planning-command, then /deepwork
 ```
 
 ## Options

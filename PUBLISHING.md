@@ -2,7 +2,7 @@
 
 ## Status
 
-Repository not created yet.
+Repository exists.
 
 Suggested repository:
 
@@ -55,12 +55,21 @@ Repository:
 Suggested entry:
 
 ```markdown
-- [setup-chat-workflows](https://github.com/Zaradacht/setup-chat-workflows) - Adds modular workflow-aware `/setup-chat-workflows` and `/start-session` commands backed by plug-and-play project, workflow, and post-confirmation action files.
+- [setup-chat-workflows](https://github.com/Zaradacht/setup-chat-workflows) - Adds modular workflow-aware `/setup-chat-workflows` and `/start-session` commands backed by plug-and-play project and workflow files with workflow-local post-run actions.
 ```
 
-## 4. Suggested first release tag
+## 4. Release tags
+
+Initial release:
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
+```
+
+Current snapshot:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
 ```

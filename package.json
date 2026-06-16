@@ -1,6 +1,6 @@
 {
   "name": "setup-chat-workflows",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OpenCode plugin that adds modular workflow-aware /start-session and /setup-chat-workflows commands backed by plug-and-play workflow files.",
   "type": "module",
   "main": "index.js",
