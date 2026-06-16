@@ -52,6 +52,19 @@ Most coding sessions are not the same. A general question should not require PR-
 
 This plugin lets a project define the required session setup subset per workflow. The workflow list is plug-and-play: edit `workflows.md` to add, remove, or rename workflows.
 
+## Workflows vs skills
+
+Skills are best for known tasks: once the agent already knows what needs to happen, a skill provides the repeatable playbook for doing it.
+
+Chat workflows run one step earlier. They ask the right questions to collect context, scope, gates, and subworkflow choices before execution starts. After the workflow brief is confirmed, workflow-local post-run actions can hand off to the right skill, such as `wf-pr_review`, `wf-new_task`, or `/deepwork`.
+
+In short:
+
+```text
+workflow = ask for the right context and scope
+skill = execute a known task with a repeatable playbook
+```
+
 ## Quickstart
 
 Install in `opencode.json`:
