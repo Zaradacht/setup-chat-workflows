@@ -4,7 +4,7 @@
 
 This repository contains an OpenCode plugin that injects workflow-aware chatbot commands:
 
-- `/setup-workflows`
+- `/setup-chat-workflows`
 - `/new-session`
 
 The plugin is meant to be shareable on `awesome-opencode` and installable as a normal npm package.
@@ -25,7 +25,7 @@ Lineage:
 .opencode/workflow-intake/project.md
 .opencode/workflow-intake/workflows.md
 .opencode/workflow-intake/actions.md
-  -> injected into /setup-workflows as editable setup parts
+  -> injected into /setup-chat-workflows as editable setup parts
   -> used to generate /new-session workflow intake
 ```
 

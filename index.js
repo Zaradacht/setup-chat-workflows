@@ -1,14 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-export const id = "opencode-workflow-intake";
+export const id = "setup-chat-workflows";
 
 const PARTS_DIR = ".opencode/workflow-intake";
 const PROJECT_FILE = `${PARTS_DIR}/project.md`;
 const WORKFLOWS_FILE = `${PARTS_DIR}/workflows.md`;
 const ACTIONS_FILE = `${PARTS_DIR}/actions.md`;
 const NEW_SESSION_COMMAND = "new-session";
-const SETUP_COMMAND = "setup-workflows";
+const SETUP_COMMAND = "setup-chat-workflows";
 
 function stringOption(options, key, fallback) {
   const value = options?.[key];
@@ -83,7 +83,7 @@ ${PARTS_DIR}/
 ├── workflows.md
 │   ├── any number of workflow sections
 │   ├── each workflow defines required structured questions
-│   ├── each workflow defines required free-text fields
+│   ├── each workflow defines required input fields
 │   ├── each workflow defines start/readiness gates
 │   └── examples could be general, pr-review, new-task, incident, release, design-review, etc.
 │
@@ -101,6 +101,23 @@ Files this command writes:
 - \`${paths.actions}\``;
 }
 
+function actionsExplanation() {
+  return `Post-intake actions are optional next steps that /new-session runs or suggests only after the user confirms the workflow brief.
+
+They are not setup-time actions. They are workflow-specific handoffs such as:
+
+- for \`new-task\`: suggest or run a planning command after intake confirmation
+- for \`pr-review\`: suggest a review command, checklist, or reviewer skill after intake confirmation
+- for \`incident\`: suggest an incident-debugging checklist after intake confirmation
+- for \`general\`: no action
+
+Typical policies:
+
+- \`none\`: show no follow-up action
+- \`suggest only\`: show the action and ask before running it
+- \`run after confirmation\`: run it only after the user selects \"Confirm and start\"`;
+}
+
 function setupTemplate(paths, parts) {
   return `# Setup Workflow Intake
 
@@ -111,6 +128,15 @@ $ARGUMENTS
 Set up this project's structured workflow intake. The setup is modular and upgradable: project defaults, workflow definitions, and post-intake actions live in separate plug-and-play files.
 
 ${setupTree(paths)}
+
+${actionsExplanation()}
+
+Project-default behavior:
+
+- Use the currently injected Project defaults section as the starting values for the setup form.
+- When the user chooses "Project defaults only", prefill the form from ${paths.project} and render only the proposed project defaults file.
+- When the user chooses "Workflow definitions only" or "Post-intake actions only", still show the current project defaults as read-only context so workflow choices inherit the right project label, source systems, update rules, and safety rules.
+- When rendering proposed files, preserve existing values unless the user explicitly changes them.
 
 Current injected setup parts at OpenCode startup:
 
@@ -133,13 +159,20 @@ Important generic rule:
 First-run behavior:
 
 1. State which of the three files are missing.
-2. Ask one batched \`question\` form for high-level setup choices.
-3. Ask one compact free-text fill-in block for project/workflow/action details.
-4. Render proposed markdown for all three files.
-5. Ask for confirmation before writing.
-6. On confirmation, create \`${PARTS_DIR}\`, write all three files, validate they exist, and tell the user to restart OpenCode so \`/new-session\` is regenerated from the updated parts.
+2. Ask exactly one compact setup form for what to create/update and all project/workflow/action details.
+3. Render proposed markdown for all three files.
+4. Ask for confirmation before writing.
+5. On confirmation, create \`${PARTS_DIR}\`, write all three files, validate they exist, and tell the user to restart OpenCode so \`/new-session\` is regenerated from the updated parts.
 
-One batched \`question\` form should ask:
+The first field in the single setup form must ask what the user wants to create or update:
+
+- Full setup: project defaults + workflows + post-intake actions
+- Project defaults only
+- Workflow definitions only
+- Post-intake actions only
+- Review current setup without writing
+
+The same single setup form should also include:
 
 - starter workflow set: blank/custom, general+pr-review+new-task, incident/release, other
 - source systems: Trello, Notion, Azure DevOps, Linear, GitHub, Bitbucket, mixed, none/unknown
@@ -149,20 +182,17 @@ One batched \`question\` form should ask:
 - post-intake action policy: none, suggest only, run after confirmation
 - default readiness rule: require all fields, allow explicit unknown/skip, ask each time
 
-One compact free-text fill-in block should ask:
-
-\`\`\`text
 project label:
 project defaults and safety rules:
-workflow names to create:
+workflow names to create/update:
 for each workflow, required structured questions:
-for each workflow, required free-text fields:
+for each workflow, required input fields, if truly blocking:
+for each workflow, optional context fields, if useful but non-blocking:
 for each workflow, readiness/start gate:
-for each workflow, post-intake actions or skills:
+for each workflow, post-intake actions or skills, if any:
 default validation expectations:
 external update destination and tone:
 extra project-specific workflow notes:
-\`\`\`
 
 Render proposed files using this shape:
 
@@ -188,7 +218,8 @@ Render proposed files using this shape:
 - enabled: true
 - purpose: <when to use this workflow>
 - required structured questions: <semicolon-separated list>
-- required free-text fields: <semicolon-separated list>
+- required input fields: <semicolon-separated list>
+- optional context fields: <semicolon-separated list>
 - readiness/start gate: <when this workflow is ready to start>
 
 // ${paths.actions}
@@ -221,7 +252,7 @@ Lineage:
 ${paths.project}
 ${paths.workflows}
 ${paths.actions}
-  -> injected into /setup-workflows as editable setup parts
+  -> injected into /setup-chat-workflows as editable setup parts
   -> used to generate /new-session workflow intake
 \`\`\`
 
@@ -235,21 +266,26 @@ If no workflow catalog exists, use a minimal fallback:
 
 - Ask what workflow the user wants to start.
 - Ask what fields are required before starting.
-- Recommend running \`/setup-workflows\` once.
+- Recommend running \`/setup-chat-workflows\` once.
 
-Step 1: infer or ask for workflow type using one \`question\` tool call.
+Step 1: infer or ask for workflow type, then ask exactly one compact intake form.
 
 - Use the workflow names from \`${paths.workflows}\`.
 - Do not assume fixed workflow names.
 - If $ARGUMENTS clearly matches a workflow's purpose, preselect that workflow.
 - Otherwise ask the user to choose from configured workflows, plus "other/custom".
 
-Step 2: ask only the selected workflow's required subset.
+Step 2: ask only one form for the selected workflow's intake.
 
-- Read the selected workflow's "required structured questions" and ask those in one batched \`question\` tool call.
-- Read the selected workflow's "required free-text fields" and ask those in one compact fill-in block.
+- The intake must be a single initial form. Do not ask a second follow-up form.
+- If the \`question\` tool cannot capture text fields, present one compact fillable form in a single assistant message and wait for one user reply. Do not split structured choices and text/context fields into separate turns.
+- Combine workflow selection, required structured questions, required input fields, useful optional context fields, and gate choices into that one form.
+- If a field is unknown, TBD, none, or skip, the user can mark it in the same form.
+- If $ARGUMENTS or project defaults already answer a field, prefill it in the same form or omit it if no confirmation is needed.
+- Treat fields named \`optional ...\`, \`open notes\`, \`known risks\`, \`review focus\`, \`validation expectations\`, or similar context fields as optional entries in the same form, not a reason for a second prompt.
 - Always allow unknown, TBD, none, or skip when the workflow allows explicit unknown/skip.
 - A workflow is ready to start only when its configured required subset has answers or the user explicitly marks missing items unknown/skip.
+- Keep intake minimal: ask the fewest questions needed to determine the workflow, source links, gates, and readiness. Do not ask a redundant second form just to collect optional context.
 
 Step 3: include post-intake actions / skills.
 

@@ -6,7 +6,7 @@ Repository not created yet.
 
 Suggested repository:
 
-- GitHub: `https://github.com/Zaradacht/opencode-workflow-intake`
+- GitHub: `https://github.com/Zaradacht/setup-chat-workflows`
 
 ## 1. Final package review
 
@@ -42,7 +42,7 @@ npm publish
 
 If the package name is taken, suggested alternatives:
 
-- `@zaradacht/opencode-workflow-intake`
+- `@zaradacht/setup-chat-workflows`
 - `opencode-structured-workflows`
 - `opencode-task-intake`
 
@@ -55,7 +55,7 @@ Repository:
 Suggested entry:
 
 ```markdown
-- [opencode-workflow-intake](https://github.com/Zaradacht/opencode-workflow-intake) - Adds modular workflow-aware `/setup-workflows` and `/new-session` commands backed by plug-and-play project, workflow, and post-intake action files.
+- [setup-chat-workflows](https://github.com/Zaradacht/setup-chat-workflows) - Adds modular workflow-aware `/setup-chat-workflows` and `/new-session` commands backed by plug-and-play project, workflow, and post-intake action files.
 ```
 
 ## 4. Suggested first release tag

@@ -1,4 +1,4 @@
-# opencode-workflow-intake
+# setup-chat-workflows
 
 OpenCode plugin that adds workflow-aware chatbot commands for a structured way of working. It ships generic starter examples for:
 
@@ -10,8 +10,30 @@ but these are only defaults. Teams can create any number of workflows such as `i
 
 The plugin installs:
 
-- `/setup-workflows` — walks the user through configuring the project's workflow tree.
+- `/setup-chat-workflows` — walks the user through configuring the project's workflow tree.
 - `/new-session` — chooses or infers a workflow, asks only that workflow's required subset of questions, and starts only after the required intake is satisfied or explicitly skipped.
+
+## Human TL;DR
+
+1. Install the plugin.
+2. Restart OpenCode.
+3. Run `/setup-chat-workflows` once.
+4. Choose what to set up: project defaults, workflows, post-intake actions, or all of them.
+5. Restart OpenCode.
+6. Use `/new-session <what you want to do>`.
+
+`/new-session` will pick the right workflow, ask only the questions needed for that workflow, show a brief, and start after you confirm.
+
+Post-intake actions are optional follow-ups for the selected workflow only. Example: `new-task` can suggest a planning command after confirmation, while `general` can have no action.
+
+## Agent TL;DR
+
+- `/setup-chat-workflows` owns configuration. It creates or updates `.opencode/workflow-intake/project.md`, `workflows.md`, and `actions.md`.
+- Always ask what the user wants to edit first: full setup, project defaults only, workflow definitions only, post-intake actions only, or review current setup.
+- `/new-session` owns runtime intake. It reads the configured workflow tree, selects or infers one workflow, asks exactly one compact intake form for that workflow, renders a brief, and waits for confirmation.
+- Do not ask a second follow-up form. Compact required structured questions, required text fields, optional context, and gates into the single initial form. If a tool cannot capture text fields, present one fillable form in one assistant message and wait for one reply.
+- Post-intake actions are scoped to the selected workflow. Apply the default action policy plus the matching `## <workflow-name>` section only. Never run all actions globally.
+- Do not run post-intake actions before the user confirms the workflow brief.
 
 ## Core lineage
 
@@ -19,11 +41,11 @@ The plugin installs:
 .opencode/workflow-intake/project.md
 .opencode/workflow-intake/workflows.md
 .opencode/workflow-intake/actions.md
-  -> injected into /setup-workflows as editable setup parts
+  -> injected into /setup-chat-workflows as editable setup parts
   -> used to generate /new-session workflow intake
 ```
 
-OpenCode loads plugins at startup, so after `/setup-workflows` writes a new config, restart OpenCode to regenerate `/new-session` from the updated workflow tree.
+OpenCode loads plugins at startup, so after `/setup-chat-workflows` writes a new config, restart OpenCode to regenerate `/new-session` from the updated workflow tree.
 
 ## Why
 
@@ -38,7 +60,7 @@ Install in `opencode.json`:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-workflow-intake"]
+  "plugin": ["setup-chat-workflows"]
 }
 ```
 
@@ -47,14 +69,14 @@ For local development:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["file:///absolute/path/to/opencode-workflow-intake"]
+  "plugin": ["file:///absolute/path/to/setup-chat-workflows"]
 }
 ```
 
 Restart OpenCode, then run:
 
 ```text
-/setup-workflows
+/setup-chat-workflows
 ```
 
 That creates:
@@ -92,7 +114,7 @@ project workflow setup
 ├── .opencode/workflow-intake/workflows.md
 │   ├── any number of workflow sections
 │   ├── each workflow defines required structured questions
-│   ├── each workflow defines required free-text fields
+│   ├── each workflow defines required input fields
 │   └── each workflow defines readiness/start gates
 │
 ├── .opencode/workflow-intake/actions.md
@@ -108,13 +130,29 @@ project workflow setup
 
 The example files included in this package define `general`, `pr-review`, and `new-task`, but the plugin itself does not require those names.
 
-## What `/setup-workflows` asks
+## What `/setup-chat-workflows` asks
 
 It uses chatbot-style prompting, not a custom UI.
 
-### 1. One batched question form
+It should first ask what you want to create or update:
 
-It asks structured choices such as:
+- full setup: project defaults + workflows + post-intake actions
+- project defaults only
+- workflow definitions only
+- post-intake actions only
+- review current setup without writing
+
+### 1. One setup form
+
+It asks one compact setup form. The first field is what you want to create or update:
+
+- full setup: project defaults + workflows + post-intake actions
+- project defaults only
+- workflow definitions only
+- post-intake actions only
+- review current setup without writing
+
+The same form includes fields such as:
 
 - project source systems
 - issue tracker relationship
@@ -123,34 +161,16 @@ It asks structured choices such as:
 - starter workflow set: blank/custom, general+pr-review+new-task, incident/release, other
 - default start gate
 - post-intake action policy
+- project label
+- default source systems / source URL guidance
+- default issue tracker project names or IDs
+- external update destination and tone
+- workflow names and required fields
+- post-intake actions or skill calls by workflow
+- approval / merge / completion rules
+- external posting and branch/policy bypass rules
 
-### 2. One free-text fill-in block
-
-It asks fields such as:
-
-```text
-project label:
-default source systems / source URL guidance:
-default issue tracker project names or IDs:
-external update destination and tone:
-general workflow notes:
-pr-review required source links:
-pr-review required review passes:
-new-task required source links:
-new-task required goal/milestone format:
-other workflow names and required fields:
-default validation expectations:
-post-intake actions or skill calls for general:
-post-intake actions or skill calls for pr-review:
-post-intake actions or skill calls for new-task:
-post-intake actions or skill calls for other workflows:
-approval / merge / completion rules:
-external posting rule:
-branch or policy bypass rule:
-extra project-specific workflow notes:
-```
-
-### 3. Rendered proposed markdown
+### 2. Rendered proposed markdown
 
 It renders the proposed three files so the user can inspect them:
 
@@ -160,7 +180,7 @@ It renders the proposed three files so the user can inspect them:
 .opencode/workflow-intake/actions.md
 ```
 
-### 4. Confirmation before writing
+### 3. Confirmation before writing
 
 It asks:
 
@@ -177,7 +197,7 @@ It writes only after confirmation.
 
 No existing config is required.
 
-If one or more workflow-intake files do not exist, `/setup-workflows` treats the missing files as first-run setup and walks the user through creating them from scratch.
+If one or more workflow-intake files do not exist, `/setup-chat-workflows` treats the missing files as first-run setup and walks the user through creating them from scratch.
 
 Requirements:
 
@@ -190,6 +210,8 @@ Requirements:
 
 `/new-session` first chooses or infers workflow type from `.opencode/workflow-intake/workflows.md`.
 
+It should ask exactly one compact intake form for the selected workflow. It should not ask a second follow-up form. Required text fields, optional notes, and gate choices should be compacted into the initial form.
+
 The package examples include these starter workflows:
 
 ### general
@@ -199,16 +221,18 @@ The package examples include these starter workflows:
 
 ### pr-review
 
-Asks PR-review-specific subset:
+Asks the minimal PR-review-specific required subset:
 
 - PR URL
 - source task/card link
 - source system
 - target branch
+- PR scope, such as full PR, PBI only, Dataform only, recipient alignment only, notification/email behavior only, pipeline dependency only, docs/config only, or other
 - review depth/pass
 - merge expectation
 - external update expectation
-- review focus / risks / validation notes
+
+Optional context such as review focus, known risks, validation notes, and open notes should not trigger a second prompt unless the workflow explicitly marks those fields as required.
 
 ### new-task
 
@@ -228,7 +252,14 @@ You can add more workflows by adding more `## <workflow-name>` sections to `work
 
 ## Post-intake actions / skills
 
-Each workflow can define post-intake actions, such as slash commands or skills to run after the user confirms the workflow brief.
+Each workflow can define post-intake actions: optional next steps that `/new-session` runs or suggests only after the user confirms the workflow brief.
+
+They are not setup-time actions. They are workflow-specific handoffs such as:
+
+- for `new-task`: suggest or run a planning command after intake confirmation
+- for `pr-review`: suggest a review command, checklist, or reviewer skill after intake confirmation
+- for `incident`: suggest an incident-debugging checklist after intake confirmation
+- for `general`: no action
 
 Examples:
 
@@ -253,7 +284,7 @@ For a project that should suggest a planning command for new tasks:
 
 - enabled: true
 - required structured questions: source task/card link; source system; implementation expectation; plan approval gate; review depth/pass; completion/merge gate; external update expectation
-- required free-text fields: goal; milestones to confirm; scope boundaries; validation expectations; open notes
+- required input fields: goal; milestones to confirm; scope boundaries; validation expectations; open notes
 - default review depth/pass: strong/4-pass for risky work
 - start gate: do not start implementation until goal, milestones, and gates are answered or explicitly marked unknown/skip by the user
 - post-intake actions / skills: /your-planning-command after intake confirmation
@@ -266,13 +297,13 @@ For a project that should suggest a planning command for new tasks:
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
     [
-      "opencode-workflow-intake",
+      "setup-chat-workflows",
       {
         "projectPath": ".opencode/workflow-intake/project.md",
         "workflowsPath": ".opencode/workflow-intake/workflows.md",
         "actionsPath": ".opencode/workflow-intake/actions.md",
         "newSessionCommand": "new-session",
-        "setupCommand": "setup-workflows",
+        "setupCommand": "setup-chat-workflows",
         "overwrite": false
       }
     ]
@@ -314,6 +345,6 @@ Source-only maintainer files such as `AGENTS.md` and `PUBLISHING.md` are intenti
 
 Suggested awesome-opencode description:
 
-> Adds workflow-aware `/setup-workflows` and `/new-session` commands for general, PR-review, and new-task intake, backed by a per-project workflow tree.
+> Adds workflow-aware `/setup-chat-workflows` and `/new-session` commands for general, PR-review, and new-task intake, backed by a per-project workflow tree.
 >
-> Alternative generic wording: Adds modular workflow-aware `/setup-workflows` and `/new-session` commands backed by plug-and-play project, workflow, and post-intake action files.
+> Alternative generic wording: Adds modular workflow-aware `/setup-chat-workflows` and `/new-session` commands backed by plug-and-play project, workflow, and post-intake action files.
