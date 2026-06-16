@@ -11,7 +11,7 @@ but these are only defaults. Teams can create any number of workflows such as `i
 The plugin installs:
 
 - `/setup-chat-workflows` — walks the user through configuring the project's workflow tree.
-- `/new-session` — chooses or infers a workflow, asks only that workflow's required subset of questions, and starts only after the required intake is satisfied or explicitly skipped.
+- `/start-session` — chooses or infers a workflow, asks only that workflow's required subset of questions, and starts only after the required intake is satisfied or explicitly skipped.
 
 ## Human TL;DR
 
@@ -20,9 +20,9 @@ The plugin installs:
 3. Run `/setup-chat-workflows` once.
 4. Choose what to set up: project defaults, workflows, post-intake actions, or all of them.
 5. Restart OpenCode.
-6. Use `/new-session <what you want to do>`.
+6. Use `/start-session <what you want to do>`.
 
-`/new-session` will pick the right workflow, ask only the questions needed for that workflow, show a brief, and start after you confirm.
+`/start-session` first asks the user to choose one configured workflow, then asks that selected workflow's own questionnaire, shows a brief, and starts after confirmation.
 
 Post-intake actions are optional follow-ups for the selected workflow only. Example: `new-task` can suggest a planning command after confirmation, while `general` can have no action.
 
@@ -30,8 +30,8 @@ Post-intake actions are optional follow-ups for the selected workflow only. Exam
 
 - `/setup-chat-workflows` owns configuration. It creates or updates `.opencode/workflow-intake/project.md`, `workflows.md`, and `actions.md`.
 - Always ask what the user wants to edit first: full setup, project defaults only, workflow definitions only, post-intake actions only, or review current setup.
-- `/new-session` owns runtime intake. It reads the configured workflow tree, selects or infers one workflow, asks exactly one compact intake form for that workflow, renders a brief, and waits for confirmation.
-- Do not ask a second follow-up form. Compact required structured questions, required text fields, optional context, and gates into the single initial form. If a tool cannot capture text fields, present one fillable form in one assistant message and wait for one reply.
+- `/start-session` owns runtime intake. It reads the configured workflow tree, asks a workflow-picker questionnaire first, then asks the selected workflow's own compact questionnaire, renders a brief, and waits for confirmation.
+- Do not combine workflow selection and workflow-specific questions into one form. After workflow selection, compact required structured questions, required text fields, optional context, and gates into that workflow's questionnaire. Do not print console fill-in blocks unless the `question` tool is unavailable or fails.
 - Post-intake actions are scoped to the selected workflow. Apply the default action policy plus the matching `## <workflow-name>` section only. Never run all actions globally.
 - Do not run post-intake actions before the user confirms the workflow brief.
 
@@ -42,10 +42,10 @@ Post-intake actions are optional follow-ups for the selected workflow only. Exam
 .opencode/workflow-intake/workflows.md
 .opencode/workflow-intake/actions.md
   -> injected into /setup-chat-workflows as editable setup parts
-  -> used to generate /new-session workflow intake
+  -> used to generate /start-session workflow intake
 ```
 
-OpenCode loads plugins at startup, so after `/setup-chat-workflows` writes a new config, restart OpenCode to regenerate `/new-session` from the updated workflow tree.
+OpenCode loads plugins at startup, so after `/setup-chat-workflows` writes a new config, restart OpenCode to regenerate `/start-session` from the updated workflow tree.
 
 ## Why
 
@@ -90,13 +90,13 @@ That creates:
 Restart OpenCode again, then start work with:
 
 ```text
-/new-session Review https://github.com/acme/app/pull/123
+/start-session Review https://github.com/acme/app/pull/123
 ```
 
 or:
 
 ```text
-/new-session Implement the Trello card https://trello.com/c/abc123
+/start-session Implement the Trello card https://trello.com/c/abc123
 ```
 
 ## Workflow tree
@@ -125,7 +125,7 @@ project workflow setup
 └── output
     ├── write the three workflow-intake files
     ├── restart OpenCode
-    └── /new-session is generated from those parts
+    └── /start-session is generated from those parts
 ```
 
 The example files included in this package define `general`, `pr-review`, and `new-task`, but the plugin itself does not require those names.
@@ -206,11 +206,11 @@ Requirements:
 - The project directory, or at least `.opencode/`, must be writable.
 - No external API keys or services are required.
 
-## What `/new-session` asks
+## What `/start-session` asks
 
-`/new-session` first chooses or infers workflow type from `.opencode/workflow-intake/workflows.md`.
+`/start-session` first chooses or infers workflow type from `.opencode/workflow-intake/workflows.md`.
 
-It should ask exactly one compact intake form for the selected workflow. It should not ask a second follow-up form. Required text fields, optional notes, and gate choices should be compacted into the initial form.
+It should ask a workflow picker first, then ask exactly one compact intake questionnaire for the selected workflow. Required text fields, optional notes, and gate choices should be compacted into the selected workflow's questionnaire.
 
 The package examples include these starter workflows:
 
@@ -252,12 +252,12 @@ You can add more workflows by adding more `## <workflow-name>` sections to `work
 
 ## Post-intake actions / skills
 
-Each workflow can define post-intake actions: optional next steps that `/new-session` runs or suggests only after the user confirms the workflow brief.
+Each workflow can define post-intake actions: optional next steps that `/start-session` runs or suggests only after the user confirms the workflow brief.
 
 They are not setup-time actions. They are workflow-specific handoffs such as:
 
 - for `new-task`: suggest or run a planning command after intake confirmation
-- for `pr-review`: suggest a review command, checklist, or reviewer skill after intake confirmation
+- for `pr-review`: load/use the `pr-review` skill after intake confirmation
 - for `incident`: suggest an incident-debugging checklist after intake confirmation
 - for `general`: no action
 
@@ -270,7 +270,7 @@ Examples:
 
 Rules:
 
-- `/new-session` includes these actions in the rendered workflow brief.
+- `/start-session` includes these actions in the rendered workflow brief.
 - It does not run them before confirmation.
 - If policy is `suggest only`, it asks whether to run them.
 - If policy is `run after confirmation`, it runs them only after the user selects `Confirm and start`.
@@ -302,7 +302,7 @@ For a project that should suggest a planning command for new tasks:
         "projectPath": ".opencode/workflow-intake/project.md",
         "workflowsPath": ".opencode/workflow-intake/workflows.md",
         "actionsPath": ".opencode/workflow-intake/actions.md",
-        "newSessionCommand": "new-session",
+        "startSessionCommand": "start-session",
         "setupCommand": "setup-chat-workflows",
         "overwrite": false
       }
@@ -316,7 +316,7 @@ Options:
 - `projectPath`: project-relative project defaults file.
 - `workflowsPath`: project-relative workflow catalog file.
 - `actionsPath`: project-relative post-intake actions file.
-- `newSessionCommand`: command name for workflow-aware intake.
+- `startSessionCommand`: command name for workflow-aware intake.
 - `setupCommand`: command name for workflow setup.
 - `overwrite`: when `false`, existing commands are preserved.
 
@@ -345,6 +345,6 @@ Source-only maintainer files such as `AGENTS.md` and `PUBLISHING.md` are intenti
 
 Suggested awesome-opencode description:
 
-> Adds workflow-aware `/setup-chat-workflows` and `/new-session` commands for general, PR-review, and new-task intake, backed by a per-project workflow tree.
+> Adds workflow-aware `/setup-chat-workflows` and `/start-session` commands for general, PR-review, and new-task intake, backed by a per-project workflow tree.
 >
-> Alternative generic wording: Adds modular workflow-aware `/setup-chat-workflows` and `/new-session` commands backed by plug-and-play project, workflow, and post-intake action files.
+> Alternative generic wording: Adds modular workflow-aware `/setup-chat-workflows` and `/start-session` commands backed by plug-and-play project, workflow, and post-intake action files.

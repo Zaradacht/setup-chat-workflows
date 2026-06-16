@@ -5,7 +5,7 @@
 This repository contains an OpenCode plugin that injects workflow-aware chatbot commands:
 
 - `/setup-chat-workflows`
-- `/new-session`
+- `/start-session`
 
 The plugin is meant to be shareable on `awesome-opencode` and installable as a normal npm package.
 
@@ -17,7 +17,7 @@ The plugin supports any number of user-defined workflows. The repository ships g
 - `pr-review`: requires PR/source/review context before starting.
 - `new-task`: requires source/goal/milestones/gates before starting.
 
-These are examples, not hardcoded requirements. Workflows may define post-intake actions / skills, such as planning or review commands, which `/new-session` should run or suggest only after the workflow brief is confirmed.
+These are examples, not hardcoded requirements. Workflows may define post-intake actions / skills, such as planning or review commands, which `/start-session` should run or suggest only after the workflow brief is confirmed.
 
 Lineage:
 
@@ -26,7 +26,7 @@ Lineage:
 .opencode/workflow-intake/workflows.md
 .opencode/workflow-intake/actions.md
   -> injected into /setup-chat-workflows as editable setup parts
-  -> used to generate /new-session workflow intake
+  -> used to generate /start-session workflow intake
 ```
 
 ## Key files

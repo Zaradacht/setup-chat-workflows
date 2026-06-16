@@ -7,7 +7,7 @@ const PARTS_DIR = ".opencode/workflow-intake";
 const PROJECT_FILE = `${PARTS_DIR}/project.md`;
 const WORKFLOWS_FILE = `${PARTS_DIR}/workflows.md`;
 const ACTIONS_FILE = `${PARTS_DIR}/actions.md`;
-const NEW_SESSION_COMMAND = "new-session";
+const START_SESSION_COMMAND = "start-session";
 const SETUP_COMMAND = "setup-chat-workflows";
 
 function stringOption(options, key, fallback) {
@@ -102,12 +102,12 @@ Files this command writes:
 }
 
 function actionsExplanation() {
-  return `Post-intake actions are optional next steps that /new-session runs or suggests only after the user confirms the workflow brief.
+  return `Post-intake actions are optional next steps that /start-session runs or suggests only after the user confirms the workflow brief.
 
 They are not setup-time actions. They are workflow-specific handoffs such as:
 
 - for \`new-task\`: suggest or run a planning command after intake confirmation
-- for \`pr-review\`: suggest a review command, checklist, or reviewer skill after intake confirmation
+- for \`pr-review\`: load/use the \`pr-review\` skill after intake confirmation
 - for \`incident\`: suggest an incident-debugging checklist after intake confirmation
 - for \`general\`: no action
 
@@ -162,7 +162,7 @@ First-run behavior:
 2. Ask one compact questionnaire using the \`question\` tool for what to create/update and all project/workflow/action details.
 3. Render proposed markdown for all three files.
 4. Ask for confirmation before writing.
-5. On confirmation, create \`${PARTS_DIR}\`, write all three files, validate they exist, and tell the user to restart OpenCode so \`/new-session\` is regenerated from the updated parts.
+5. On confirmation, create \`${PARTS_DIR}\`, write all three files, validate they exist, and tell the user to restart OpenCode so \`/start-session\` is regenerated from the updated parts.
 
 Questionnaire interaction rule:
 
@@ -244,8 +244,8 @@ Then ask with the \`question\` tool: "Write these workflow intake files?" Option
 If confirmed, write all three files. If writing is denied, show the three markdown blocks so the user can save them manually.`;
 }
 
-function newSessionTemplate(paths, parts) {
-  return `# New Session Workflow Intake
+function startSessionTemplate(paths, parts) {
+  return `# Start Session Workflow Intake
 
 Considering optional prefill input:
 
@@ -260,7 +260,7 @@ ${paths.project}
 ${paths.workflows}
 ${paths.actions}
   -> injected into /setup-chat-workflows as editable setup parts
-  -> used to generate /new-session workflow intake
+  -> used to generate /start-session workflow intake
 \`\`\`
 
 Workflow-intake parts injected at OpenCode startup:
@@ -275,27 +275,30 @@ If no workflow catalog exists, use a minimal fallback:
 - Ask what fields are required before starting.
 - Recommend running \`/setup-chat-workflows\` once.
 
-Step 1: infer or ask for workflow type, then ask one compact intake questionnaire.
+Step 1: choose the workflow first.
 
 - Use the workflow names from \`${paths.workflows}\`.
 - Do not assume fixed workflow names.
-- If $ARGUMENTS clearly matches a workflow's purpose, preselect that workflow.
-- Otherwise ask the user to choose from configured workflows, plus "other/custom".
+- Always start with a workflow picker using the \`question\` tool unless $ARGUMENTS unambiguously names exactly one configured workflow.
+- The workflow picker must list all enabled workflows from the configured catalog, plus \`other/custom\`.
+- If $ARGUMENTS unambiguously names exactly one configured workflow, state the selected workflow and continue to Step 2. If there is any ambiguity, use the workflow picker.
 
-Step 2: ask only one questionnaire for the selected workflow's intake.
+Step 2: ask the selected workflow's own questionnaire.
 
-- The intake must be a single initial questionnaire. Do not ask a second follow-up form.
+- After the workflow is selected, ask a separate workflow-specific questionnaire using that workflow's \`required structured questions\`, \`required input fields\`, and useful \`optional context fields\`.
+- This is intentionally a second interaction after workflow selection. Do not combine workflow selection and workflow-specific questions into one form.
+- The workflow-specific intake must be one questionnaire for that workflow. Do not ask a third follow-up form unless a required field is missing or the user chooses edit.
 - Use the \`question\` tool, not a plain console/text fill-in block, for the intake questionnaire.
 - Ask multiple questions in one \`question\` tool call when possible so the user sees the questionnaire/form UI.
 - For open text fields, provide short common options such as \`unknown/TBD\`, \`none\`, \`skip\`, \`use supplied arguments\`, and rely on the tool's custom/type-your-own answer support for free text.
 - Do not print a markdown form and ask the user to fill it out unless the \`question\` tool is unavailable or fails.
-- Combine workflow selection, required structured questions, required input fields, useful optional context fields, and gate choices into that one questionnaire.
+- Include the selected workflow's required structured questions, required input fields, useful optional context fields, readiness/start gate, and relevant project defaults in that workflow-specific questionnaire.
 - If a field is unknown, TBD, none, or skip, the user can mark it in the same questionnaire.
 - If $ARGUMENTS or project defaults already answer a field, prefill it in the same questionnaire or omit it if no confirmation is needed.
 - Treat fields named \`optional ...\`, \`open notes\`, \`known risks\`, \`review focus\`, \`validation expectations\`, or similar context fields as optional entries in the same form, not a reason for a second prompt.
 - Always allow unknown, TBD, none, or skip when the workflow allows explicit unknown/skip.
 - A workflow is ready to start only when its configured required subset has answers or the user explicitly marks missing items unknown/skip.
-- Keep intake minimal: ask the fewest questions needed to determine the workflow, source links, gates, and readiness. Do not ask a redundant second questionnaire just to collect optional context.
+- Keep intake minimal: after the workflow picker, ask the fewest workflow-specific questions needed to determine source links, gates, and readiness. Do not ask a redundant third questionnaire just to collect optional context.
 
 Step 3: include post-intake actions / skills.
 
@@ -304,7 +307,7 @@ Step 3: include post-intake actions / skills.
 - Do not run actions before confirmation.
 - If policy is "suggest only", ask whether to run them.
 - If policy is "run after confirmation", run them only after the user selects "Confirm and start".
-- If an action is a slash command such as \`/your-planning-command\`, call that command or follow its equivalent loaded skill behavior after confirmation.
+- If an action names a skill such as \`pr-review\`, load/use that skill after confirmation. If an action is a slash command such as \`/your-planning-command\`, call that command or follow its equivalent loaded skill behavior after confirmation.
 
 After collecting the selected workflow's required subset, render a concise workflow brief:
 
@@ -345,7 +348,7 @@ export default async function opencodeWorkflowIntake(input = {}, options = {}) {
     workflows: stringOption(options, "workflowsPath", WORKFLOWS_FILE),
     actions: stringOption(options, "actionsPath", ACTIONS_FILE),
   };
-  const newSessionCommand = stringOption(options, "newSessionCommand", NEW_SESSION_COMMAND);
+  const startSessionCommand = stringOption(options, "startSessionCommand", START_SESSION_COMMAND);
   const setupCommand = stringOption(options, "setupCommand", SETUP_COMMAND);
   const overwrite = booleanOption(options, "overwrite", false);
   const root = projectRoot(input);
@@ -355,10 +358,10 @@ export default async function opencodeWorkflowIntake(input = {}, options = {}) {
     config: (config) => {
       config.command ??= {};
 
-      if (overwrite || !config.command[newSessionCommand]) {
-        config.command[newSessionCommand] = {
+      if (overwrite || !config.command[startSessionCommand]) {
+        config.command[startSessionCommand] = {
           description: "Start workflow-aware task intake",
-          template: newSessionTemplate(paths, parts),
+          template: startSessionTemplate(paths, parts),
         };
       }
 

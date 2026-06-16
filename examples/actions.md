@@ -8,7 +8,8 @@
 
 ## pr-review
 
-- post-intake actions / skills: suggest configured review command or reviewer skill after intake confirmation, if one exists
+- action policy: run after confirmation
+- post-intake actions / skills: load/use skill `pr-review` after intake confirmation
 
 ## new-task
 

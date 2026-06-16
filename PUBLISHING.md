@@ -55,7 +55,7 @@ Repository:
 Suggested entry:
 
 ```markdown
-- [setup-chat-workflows](https://github.com/Zaradacht/setup-chat-workflows) - Adds modular workflow-aware `/setup-chat-workflows` and `/new-session` commands backed by plug-and-play project, workflow, and post-intake action files.
+- [setup-chat-workflows](https://github.com/Zaradacht/setup-chat-workflows) - Adds modular workflow-aware `/setup-chat-workflows` and `/start-session` commands backed by plug-and-play project, workflow, and post-intake action files.
 ```
 
 ## 4. Suggested first release tag
