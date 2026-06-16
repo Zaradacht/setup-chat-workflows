@@ -294,7 +294,11 @@ Step 2: ask the selected workflow's own questionnaire.
 - Do not print a markdown form and ask the user to fill it out unless the \`question\` tool is unavailable or fails.
 - Include the selected workflow's required structured questions, required input fields, useful optional context fields, readiness/start gate, and relevant project defaults in that workflow-specific questionnaire.
 - If a field is unknown, TBD, none, or skip, the user can mark it in the same questionnaire.
-- If $ARGUMENTS or project defaults already answer a field, prefill it in the same questionnaire or omit it if no confirmation is needed.
+- Project defaults are authoritative. If $ARGUMENTS or project defaults already answer a field, omit that question unless the workflow explicitly says to confirm it or the user asks to override defaults.
+- Do not ask for source system, issue tracker relationship/project, external update destination/language/tone, validation expectations, review default/depth, posting rule, or bypass/merge safety if the Project defaults section already defines them clearly.
+- Include omitted default-derived values in the rendered workflow brief under \`defaults applied\` so the user can see what was inherited.
+- For fields that are partially defaulted but still need a user decision, ask only the missing decision. Example: if source system is defaulted to Azure DevOps, do not ask source system; ask only the work item/PR link if missing.
+- If the selected workflow declares \`full PR checkbox\` plus \`review scope free text\`, ask the full PR field as a checkbox/choice and ask one free-text scope field only when full PR is not selected or the user wants to narrow the review.
 - Treat fields named \`optional ...\`, \`open notes\`, \`known risks\`, \`review focus\`, \`validation expectations\`, or similar context fields as optional entries in the same form, not a reason for a second prompt.
 - Always allow unknown, TBD, none, or skip when the workflow allows explicit unknown/skip.
 - A workflow is ready to start only when its configured required subset has answers or the user explicitly marks missing items unknown/skip.
@@ -307,7 +311,7 @@ Step 3: include post-intake actions / skills.
 - Do not run actions before confirmation.
 - If policy is "suggest only", ask whether to run them.
 - If policy is "run after confirmation", run them only after the user selects "Confirm and start".
-- If an action names a skill such as \`pr-review\`, load/use that skill after confirmation. If an action is a slash command such as \`/your-planning-command\`, call that command or follow its equivalent loaded skill behavior after confirmation.
+- If an action names a skill such as \`wf-pr_review\`, load/use that skill after confirmation. If full PR is selected, include \`wf-pr_review_scope_full_pr\` in post-intake actions and load/use it after the main workflow skill. Do not infer or load other PR scope skills from free text. If an action is a slash command such as \`/your-planning-command\`, call that command or follow its equivalent loaded skill behavior after confirmation.
 
 After collecting the selected workflow's required subset, render a concise workflow brief:
 
@@ -326,6 +330,9 @@ gates:
 
 validation:
 - <...>
+
+defaults applied:
+- <project default fields inherited without asking>
 
 external updates:
 - <...>

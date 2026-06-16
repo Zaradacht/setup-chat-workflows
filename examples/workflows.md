@@ -13,11 +13,11 @@
 
 - enabled: true
 - purpose: review an existing pull request or merge request
-- required structured questions: PR URL; source task/card link or explicit none; source system; target branch; PR scope; review depth/pass; merge expectation; external update expectation
+- required structured questions: PR URL; source task/card/work-item link or explicit none; target branch unless defaulted; full PR checkbox; review scope free text; merge expectation unless defaulted; external update expectation unless defaulted
 - required input fields: none
 - optional context fields: review focus; known risks; validation expectations; open notes
-- PR scope examples: full PR; PBI only; Dataform only; recipient alignment only; notification/email behavior only; pipeline dependency only; docs/config only; other
-- readiness/start gate: can start review when PR URL, source link or explicit none, source system, target branch, PR scope, review depth/pass, merge expectation, and external update expectation are answered or explicitly marked unknown/skip by the user
+- review scope fields: full PR checkbox -> wf-pr_review_scope_full_pr when selected; review scope free text -> required when full PR is not selected or when the user wants to narrow the review
+- readiness/start gate: can start review when PR URL, source link or explicit none, target branch if not defaulted, either full PR is selected or review scope free text is provided, merge expectation if not defaulted, and external update expectation if not defaulted are answered or explicitly marked unknown/skip by the user
 
 ## new-task
 
