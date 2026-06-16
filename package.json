@@ -17,7 +17,7 @@
     "opencode",
     "opencode-plugin",
     "workflow",
-    "intake",
+    "session-setup",
     "slash-command",
     "pr-review",
     "task-management"

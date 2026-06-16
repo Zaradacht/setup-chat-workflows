@@ -17,16 +17,15 @@ The plugin supports any number of user-defined workflows. The repository ships g
 - `pr-review`: requires PR/source/review context before starting.
 - `new-task`: requires source/goal/milestones/gates before starting.
 
-These are examples, not hardcoded requirements. Workflows may define post-intake actions / skills, such as planning or review commands, which `/start-session` should run or suggest only after the workflow brief is confirmed.
+These are examples, not hardcoded requirements. Workflows may define post-confirmation actions / skills, such as planning or review commands, which `/start-session` should run or suggest only after the workflow brief is confirmed.
 
 Lineage:
 
 ```text
-.opencode/workflow-intake/project.md
-.opencode/workflow-intake/workflows.md
-.opencode/workflow-intake/actions.md
-  -> injected into /setup-chat-workflows as editable setup parts
-  -> used to generate /start-session workflow intake
+projects/.opencode/chat-workflows/project.md
+projects/.opencode/chat-workflows/workflows.md
+  -> injected into /setup-chat-workflows as editable setup files
+  -> used to generate /start-session chat workflows
 ```
 
 ## Key files
@@ -34,7 +33,7 @@ Lineage:
 - `index.js`: plugin entrypoint and command-template injection
 - `examples/project.md`: safe example project defaults
 - `examples/workflows.md`: safe example workflow catalog
-- `examples/actions.md`: safe example post-intake actions
+- `examples/workflows.md`: example workflows with workflow-local post-run actions
 - `README.md`: user-facing docs
 - `package.json`: npm and OpenCode plugin metadata
 

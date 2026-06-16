@@ -21,7 +21,7 @@ Check that the tarball includes:
 - `index.js`
 - `examples/project.md`
 - `examples/workflows.md`
-- `examples/actions.md`
+- workflow-local post-run actions in `examples/workflows.md`
 - `README.md`
 - `LICENSE`
 
@@ -44,7 +44,7 @@ If the package name is taken, suggested alternatives:
 
 - `@zaradacht/setup-chat-workflows`
 - `opencode-structured-workflows`
-- `opencode-task-intake`
+- `opencode-task-session setup`
 
 ## 3. Submit to awesome-opencode
 
@@ -55,7 +55,7 @@ Repository:
 Suggested entry:
 
 ```markdown
-- [setup-chat-workflows](https://github.com/Zaradacht/setup-chat-workflows) - Adds modular workflow-aware `/setup-chat-workflows` and `/start-session` commands backed by plug-and-play project, workflow, and post-intake action files.
+- [setup-chat-workflows](https://github.com/Zaradacht/setup-chat-workflows) - Adds modular workflow-aware `/setup-chat-workflows` and `/start-session` commands backed by plug-and-play project, workflow, and post-confirmation action files.
 ```
 
 ## 4. Suggested first release tag

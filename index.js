@@ -3,10 +3,8 @@ import path from "node:path";
 
 export const id = "setup-chat-workflows";
 
-const PARTS_DIR = ".opencode/workflow-intake";
-const PROJECT_FILE = `${PARTS_DIR}/project.md`;
-const WORKFLOWS_FILE = `${PARTS_DIR}/workflows.md`;
-const ACTIONS_FILE = `${PARTS_DIR}/actions.md`;
+const DEFAULT_PARTS_DIR = ".opencode/chat-workflows";
+const MANAGED_WORKSPACE_PARTS_DIR = "projects/.opencode/chat-workflows";
 const START_SESSION_COMMAND = "start-session";
 const SETUP_COMMAND = "setup-chat-workflows";
 
@@ -40,8 +38,25 @@ async function readText(filePath) {
   }
 }
 
+async function pathExists(filePath) {
+  try {
+    await fs.stat(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function defaultPartsDir(root) {
+  if (await pathExists(resolvePath(root, "projects/.opencode"))) return MANAGED_WORKSPACE_PARTS_DIR;
+  return DEFAULT_PARTS_DIR;
+}
+
 async function readParts(root, paths) {
-  const entries = await Promise.all(Object.entries(paths).map(async ([key, relativePath]) => {
+  const entries = await Promise.all(Object.entries({
+    project: paths.project,
+    workflows: paths.workflows,
+  }).map(async ([key, relativePath]) => {
     const absolutePath = resolvePath(root, relativePath);
     const content = await readText(absolutePath);
     return [key, { relativePath, absolutePath, content }];
@@ -63,15 +78,14 @@ function injectedParts(parts) {
   return [
     partBlock("Project defaults", parts.project, "_No project defaults file exists yet._"),
     partBlock("Workflow catalog", parts.workflows, "_No workflow catalog file exists yet._"),
-    partBlock("Post-intake actions / skills", parts.actions, "_No actions file exists yet._"),
   ].join("\n\n---\n\n");
 }
 
 function setupTree(paths) {
-  return `Plug-and-play setup tree:
+  return `Setup tree:
 
 \`\`\`text
-${PARTS_DIR}/
+${paths.dir}/
 ├── project.md
 │   ├── project label
 │   ├── source systems
@@ -80,126 +94,58 @@ ${PARTS_DIR}/
 │   ├── validation defaults
 │   └── safety / posting / bypass rules
 │
-├── workflows.md
-│   ├── any number of workflow sections
-│   ├── each workflow defines required structured questions
-│   ├── each workflow defines required input fields
-│   ├── each workflow defines start/readiness gates
-│   └── examples could be general, pr-review, new-task, incident, release, design-review, etc.
-│
-└── actions.md
-    ├── post-intake action policy
-    ├── workflow-specific commands or skills
-    ├── suggest-only actions
-    └── run-after-confirmation actions
+└── workflows.md
+    ├── workflow sections
+    ├── optional nested subworkflow sections
+    ├── readiness/start gates
+    └── workflow-local post-run actions, usually ending with /deepwork
 \`\`\`
 
 Files this command writes:
 
 - \`${paths.project}\`
-- \`${paths.workflows}\`
-- \`${paths.actions}\``;
-}
-
-function actionsExplanation() {
-  return `Post-intake actions are optional next steps that /start-session runs or suggests only after the user confirms the workflow brief.
-
-They are not setup-time actions. They are workflow-specific handoffs such as:
-
-- for \`general\`: load/use the \`wf-general\` skill after intake confirmation
-- for \`new-task\`: load/use the \`wf-new_task\` skill after intake confirmation
-- for \`pr-review\`: load/use the \`wf-pr_review\` skill after intake confirmation
-- for \`incident\`: suggest an incident-debugging checklist after intake confirmation
-
-Typical policies:
-
-- \`none\`: show no follow-up action
-- \`suggest only\`: show the action and ask before running it
-- \`run after confirmation\`: run it only after the user selects \"Confirm and start\"`;
+- \`${paths.workflows}\``;
 }
 
 function setupTemplate(paths, parts) {
-  return `# Setup Workflow Intake
+  return `# Setup Chat Workflows
 
 Considering optional prefill input:
 
 $ARGUMENTS
 
-Set up this project's structured workflow intake. The setup is modular and upgradable: project defaults, workflow definitions, and post-intake actions live in separate plug-and-play files.
+Set up this project's structured chat workflows. Project defaults live in \`project.md\`; workflow definitions, subworkflows, readiness gates, and post-run actions live in \`workflows.md\`.
 
 ${setupTree(paths)}
 
-${actionsExplanation()}
-
-Project-default behavior:
-
-- Use the currently injected Project defaults section as the starting values for the setup form.
-- When the user chooses "Project defaults only", prefill the form from ${paths.project} and render only the proposed project defaults file.
-- When the user chooses "Workflow definitions only" or "Post-intake actions only", still show the current project defaults as read-only context so workflow choices inherit the right project label, source systems, update rules, and safety rules.
-- When rendering proposed files, preserve existing values unless the user explicitly changes them.
-
-Current injected setup parts at OpenCode startup:
+Current injected setup files at OpenCode startup:
 
 ${injectedParts(parts)}
 
-Requirements:
+Rules:
 
-- OpenCode must allow \`question\`, file read, and file edit/write.
-- The current project directory must be writable, or at least \`${PARTS_DIR}\` must be creatable/writable.
-- No existing files are required. If any of the three files are missing, this is first-run setup for that part.
-- No external services, API keys, issue trackers, or project IDs are required.
-- Do not post external comments or status updates. This command only writes local workflow-intake files.
-
-Important generic rule:
-
-- Do not assume the workflows are named general/pr-review/new-task. Those are valid examples, not required names.
-- Let the user define as many workflows as they want; this setup supports any number of workflows.
-- Each workflow should declare the subset of questions required before that workflow is considered ready to start.
+- There is no separate actions file. Put post-run actions directly in each workflow or subworkflow as \`post-run actions:\`.
+- Workflows may contain nested subworkflows using \`### <parent>/<subworkflow>\` sections or a \`subworkflows:\` field.
+- Every workflow should normally include \`/deepwork\` as the final post-run action unless explicitly disabled.
+- Do not assume workflows are named general/pr-review/new-task. Those are examples only.
+- Do not post external comments or status updates. This command only writes local chat-workflows files.
 
 First-run behavior:
 
-1. State which of the three files are missing.
-2. Ask one compact questionnaire using the \`question\` tool for what to create/update and all project/workflow/action details.
-3. Render proposed markdown for all three files.
+1. State which of the two files are missing.
+2. Ask one compact questionnaire using the \`question\` tool for what to create/update and all project/workflow/subworkflow details.
+3. Render proposed markdown for both files.
 4. Ask for confirmation before writing.
-5. On confirmation, create \`${PARTS_DIR}\`, write all three files, validate they exist, and tell the user to restart OpenCode so \`/start-session\` is regenerated from the updated parts.
+5. On confirmation, create \`${paths.dir}\`, write both files, validate they exist, and tell the user to restart OpenCode so \`/start-session\` is regenerated from the updated files.
 
-Questionnaire interaction rule:
+The first questionnaire field must ask what the user wants to create or update:
 
-- Use the \`question\` tool, not a plain console/text fill-in block, for the setup questionnaire.
-- Ask multiple questions in one \`question\` tool call when possible so the user sees the questionnaire/form UI.
-- For open text fields, provide short common options such as \`unknown/TBD\`, \`none\`, \`keep current\`, and rely on the tool's custom/type-your-own answer support for free text.
-- Do not print a markdown form and ask the user to fill it out unless the \`question\` tool is unavailable or fails.
-
-The first field in the questionnaire must ask what the user wants to create or update:
-
-- Full setup: project defaults + workflows + post-intake actions
+- Full setup: project defaults + workflows/subworkflows
 - Project defaults only
 - Workflow definitions only
-- Post-intake actions only
 - Review current setup without writing
 
-The same questionnaire should also include:
-
-- starter workflow set: blank/custom, general+pr-review+new-task, incident/release, other
-- source systems: Trello, Notion, Azure DevOps, Linear, GitHub, Bitbucket, mixed, none/unknown
-- issue tracker relationship: primary source tracking, private mirror only, no tracker, ask each time
-- external update default: draft only, post after approval, no external updates, ask each time
-- default external update language: English, French, ask each time, other
-- post-intake action policy: none, suggest only, run after confirmation
-- default readiness rule: require all fields, allow explicit unknown/skip, ask each time
-
-project label:
-project defaults and safety rules:
-workflow names to create/update:
-for each workflow, required structured questions:
-for each workflow, required input fields, if truly blocking:
-for each workflow, optional context fields, if useful but non-blocking:
-for each workflow, readiness/start gate:
-for each workflow, post-intake actions or skills, if any:
-default validation expectations:
-external update destination and tone:
-extra project-specific workflow notes:
+The questionnaire should include workflow names, optional subworkflows, required structured questions, required input fields, optional context fields, readiness/start gates, and post-run actions for each workflow/subworkflow.
 
 Render proposed files using this shape:
 
@@ -227,138 +173,85 @@ Render proposed files using this shape:
 - required structured questions: <semicolon-separated list>
 - required input fields: <semicolon-separated list>
 - optional context fields: <semicolon-separated list>
+- subworkflows: <none | list of nested choices>
+- post-run actions: <skill/command list, usually ending with /deepwork>
 - readiness/start gate: <when this workflow is ready to start>
 
-// ${paths.actions}
-# Post-Intake Actions / Skills
+### <workflow-name>/<subworkflow-name>
 
-- default action policy: <none | suggest only | run after confirmation>
-
-## <workflow-name>
-
-- post-intake actions / skills: <none | command/skill list>
+- enabled: true
+- parent workflow: <workflow-name>
+- purpose: <when to use this subworkflow>
+- inherited fields: <all | list>
+- post-run actions: <subworkflow-specific actions, usually ending with /deepwork>
 \`\`\`
 
-Then ask with the \`question\` tool: "Write these workflow intake files?" Options: "Write files", "Edit fields", "Cancel".
-
-If confirmed, write all three files. If writing is denied, show the three markdown blocks so the user can save them manually.`;
+Then ask with the \`question\` tool: "Write these chat workflows files?" Options: "Write files", "Edit fields", "Cancel".`;
 }
 
 function startSessionTemplate(paths, parts) {
-  return `# Start Session Workflow Intake
+  return `# Start Session Chat Workflows
 
 Considering optional prefill input:
 
 $ARGUMENTS
 
-Start a structured workflow using the project workflow-intake parts.
+Start a structured chat workflow using the project chat-workflows files.
 
 Lineage:
 
 \`\`\`text
 ${paths.project}
 ${paths.workflows}
-${paths.actions}
-  -> injected into /setup-chat-workflows as editable setup parts
-  -> used to generate /start-session workflow intake
+  -> injected into /setup-chat-workflows as editable setup files
+  -> used to generate /start-session chat workflows
 \`\`\`
 
-Workflow-intake parts injected at OpenCode startup:
+Chat-workflows files injected at OpenCode startup:
 
 ${injectedParts(parts)}
 
-If the user says the workflow files changed during this OpenCode session, read the three files again before asking questions.
-
-If no workflow catalog exists, use a minimal fallback:
-
-- Ask what workflow the user wants to start.
-- Ask what fields are required before starting.
-- Recommend running \`/setup-chat-workflows\` once.
-
 Step 1: choose the workflow first.
 
-- Use the workflow names from \`${paths.workflows}\`.
-- Do not assume fixed workflow names.
-- Always start with a workflow picker using the \`question\` tool unless $ARGUMENTS unambiguously names exactly one configured workflow.
-- The workflow picker must list all enabled workflows from the configured catalog, plus \`other/custom\`.
-- If $ARGUMENTS unambiguously names exactly one configured workflow, state the selected workflow and continue to Step 2. If there is any ambiguity, use the workflow picker.
+- Use workflow names from \`${paths.workflows}\`.
+- Include enabled top-level workflows and enabled nested subworkflows declared as \`### <parent>/<subworkflow>\` or via a workflow's \`subworkflows:\` field.
+- Always start with a workflow picker using the \`question\` tool unless $ARGUMENTS unambiguously names exactly one configured workflow or subworkflow.
 
-Step 2: ask the selected workflow's own questionnaire.
+Step 2: ask the selected workflow or subworkflow questionnaire.
 
-- After the workflow is selected, ask a separate workflow-specific questionnaire using that workflow's \`required structured questions\`, \`required input fields\`, and useful \`optional context fields\`.
-- This is intentionally a second interaction after workflow selection. Do not combine workflow selection and workflow-specific questions into one form.
-- The workflow-specific intake must be one questionnaire for that workflow. Do not ask a third follow-up form unless a required field is missing or the user chooses edit.
-- Use the \`question\` tool, not a plain console/text fill-in block, for the intake questionnaire.
-- Ask multiple questions in one \`question\` tool call when possible so the user sees the questionnaire/form UI.
-- For open text fields, provide short common options such as \`unknown/TBD\`, \`none\`, \`skip\`, \`use supplied arguments\`, and rely on the tool's custom/type-your-own answer support for free text.
-- Do not print a markdown form and ask the user to fill it out unless the \`question\` tool is unavailable or fails.
-- Include the selected workflow's required structured questions, required input fields, useful optional context fields, readiness/start gate, and relevant project defaults in that workflow-specific questionnaire.
-- If a field is unknown, TBD, none, or skip, the user can mark it in the same questionnaire.
-- Project defaults are authoritative. If $ARGUMENTS or project defaults already answer a field, omit that question unless the workflow explicitly says to confirm it or the user asks to override defaults.
-- Do not ask for source system, issue tracker relationship/project, external update destination/language/tone, validation expectations, review default/depth, posting rule, or bypass/merge safety if the Project defaults section already defines them clearly.
-- Include omitted default-derived values in the rendered workflow brief under \`defaults applied\` so the user can see what was inherited.
-- For fields that are partially defaulted but still need a user decision, ask only the missing decision. Example: if source system is defaulted to Azure DevOps, do not ask source system; ask only the work item/PR link if missing.
-- If the selected workflow declares \`full PR checkbox\` plus \`review scope free text\`, ask the full PR field as a checkbox/choice and ask one free-text scope field only when full PR is not selected or the user wants to narrow the review.
-- Treat fields named \`optional ...\`, \`open notes\`, \`known risks\`, \`review focus\`, \`validation expectations\`, or similar context fields as optional entries in the same form, not a reason for a second prompt.
-- Always allow unknown, TBD, none, or skip when the workflow allows explicit unknown/skip.
-- A workflow is ready to start only when its configured required subset has answers or the user explicitly marks missing items unknown/skip.
-- Keep intake minimal: after the workflow picker, ask the fewest workflow-specific questions needed to determine source links, gates, and readiness. Do not ask a redundant third questionnaire just to collect optional context.
+- Subworkflows inherit parent workflow requirements unless they explicitly override or narrow them.
+- Ask one workflow-specific questionnaire using required structured questions, required input fields, useful optional context fields, readiness/start gate, inherited parent fields, and relevant project defaults.
+- Use the \`question\` tool, not a plain console/text fill-in block.
+- Omit questions already answered by $ARGUMENTS or project defaults unless confirmation is explicitly required.
+- Include omitted default-derived values in the rendered workflow brief under \`defaults applied\`.
 
-Step 3: include post-intake actions / skills.
+Step 3: include workflow-defined post-run actions.
 
-- Read \`${paths.actions}\` for workflow-specific actions.
-- Include relevant actions in the workflow brief under "post-intake actions".
+- Read post-run actions from the selected workflow/subworkflow in \`${paths.workflows}\`; there is no separate actions file.
 - Do not run actions before confirmation.
-- If policy is "suggest only", ask whether to run them.
-- If policy is "run after confirmation", run them only after the user selects "Confirm and start".
-- If an action names a skill such as \`wf-pr_review\`, load/use that skill after confirmation. If full PR is selected, include \`wf-pr_review_scope_full_pr\` in post-intake actions and load/use it after the main workflow skill. Do not infer or load other PR scope skills from free text. If an action is a slash command such as \`/your-planning-command\`, call that command or follow its equivalent loaded skill behavior after confirmation.
+- Do not ask for a second confirmation after the user selects \`Confirm and start\`; the workflow brief confirmation is the only action confirmation.
+- If an action names a skill such as \`wf-pr_review\`, load/use that skill after confirmation.
+- If an action is \`/deepwork\`, load/use the \`deepwork\` skill or follow \`/deepwork\` behavior after the workflow-specific skill handoff. Every configured workflow should end with \`/deepwork\` unless explicitly disabled.
+- If full PR is selected, include \`pr-review-full-pr\` in post-run actions and load/use it after the main workflow skill and before \`/deepwork\`.
 
-After collecting the selected workflow's required subset, render a concise workflow brief:
-
-\`\`\`text
-workflow: <configured workflow name>
-ready to start: <yes | no, missing fields: ...>
-
-source / links:
-- <relevant source links>
-
-goal / focus:
-<workflow-specific goal or focus>
-
-gates:
-- <workflow-specific gates>
-
-validation:
-- <...>
-
-defaults applied:
-- <project default fields inherited without asking>
-
-external updates:
-- <...>
-
-post-intake actions:
-- <skills or slash commands to run/suggest after confirmation, or none>
-
-open notes:
-- <...>
-\`\`\`
+Render a concise workflow brief with workflow, subworkflow, readiness, source links, focus, gates, validation, defaults applied, external updates, post-run actions, and open notes.
 
 Then ask with the \`question\` tool: "Confirm this workflow brief and start?" Options: "Confirm and start", "Edit fields", "Cancel".
 
-If confirmed and ready to start is yes, run/suggest configured post-intake actions as specified, then begin the normal scheduler workflow. If not ready, ask for missing required fields. If edit, ask which fields to edit. If cancel, stop.`;
+If confirmed and ready to start is yes, run configured post-run actions without any extra action-confirmation prompt, then continue the normal scheduler workflow.`;
 }
 
-export default async function opencodeWorkflowIntake(input = {}, options = {}) {
+export default async function opencodeWorkflowSessionSetup(input = {}, options = {}) {
+  const root = projectRoot(input);
+  const partsDir = stringOption(options, "partsDir", await defaultPartsDir(root));
   const paths = {
-    project: stringOption(options, "projectPath", PROJECT_FILE),
-    workflows: stringOption(options, "workflowsPath", WORKFLOWS_FILE),
-    actions: stringOption(options, "actionsPath", ACTIONS_FILE),
+    dir: partsDir,
+    project: stringOption(options, "projectPath", `${partsDir}/project.md`),
+    workflows: stringOption(options, "workflowsPath", `${partsDir}/workflows.md`),
   };
   const startSessionCommand = stringOption(options, "startSessionCommand", START_SESSION_COMMAND);
   const setupCommand = stringOption(options, "setupCommand", SETUP_COMMAND);
   const overwrite = booleanOption(options, "overwrite", false);
-  const root = projectRoot(input);
   const parts = await readParts(root, paths);
 
   return {
@@ -367,14 +260,14 @@ export default async function opencodeWorkflowIntake(input = {}, options = {}) {
 
       if (overwrite || !config.command[startSessionCommand]) {
         config.command[startSessionCommand] = {
-          description: "Start workflow-aware task intake",
+          description: "Start chat-workflow session setup",
           template: startSessionTemplate(paths, parts),
         };
       }
 
       if (overwrite || !config.command[setupCommand]) {
         config.command[setupCommand] = {
-          description: "Configure project workflow intake",
+          description: "Configure project chat workflows",
           template: setupTemplate(paths, parts),
         };
       }
