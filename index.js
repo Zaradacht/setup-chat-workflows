@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const id = "setup-chat-workflows";
+export const id = "opencode-chat-workflow-setup";
 
 const DEFAULT_PARTS_DIR = ".opencode/chat-workflows";
 const MANAGED_WORKSPACE_PARTS_DIR = "projects/.opencode/chat-workflows";

@@ -1,8 +1,10 @@
-# setup-chat-workflows
+# opencode-chat-workflow-setup
 
 Structured chat sessions, shipped as an **OpenCode plugin**.
 
-`setup-chat-workflows` lets teams define how a session should be started before any heavy lifting happens. A session workflow asks for the right context first, then hands off to existing actions/skills only when the session is confirmed.
+`opencode-chat-workflow-setup` lets teams define how a session should be started before any heavy lifting happens. A session workflow asks for the right context first, then hands off to existing actions/skills only when the session is confirmed.
+
+Package/plugin name is `opencode-chat-workflow-setup`; the user-facing setup command remains `/setup-chat-workflows` for continuity.
 
 It is a **public, generic plugin**. It does not depend on private Devkit infrastructure.
 
@@ -14,9 +16,9 @@ Different tasks need different setup before work can begin:
 - A PR review needs PR links, review mode, and angle selection.
 - A task plan often needs milestones, gate decisions, and validation expectations.
 
-`setup-chat-workflows` encodes those requirements in `workflows.md` so each project can control what gets asked and when.
+`opencode-chat-workflow-setup` encodes those requirements in `workflows.md` so each project can control what gets asked and when.
 
-## Commands (v0.3.0)
+## Commands (v0.3.1)
 
 This plugin registers:
 
@@ -43,7 +45,7 @@ Install plugin:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["setup-chat-workflows"]
+  "plugin": ["opencode-chat-workflow-setup"]
 }
 ```
 
@@ -78,7 +80,7 @@ This plugin keeps that boundary clean:
 
 ## Built-in vs project template packs
 
-Two template sources are supported in v0.3.0:
+Two template sources are supported in v0.3.1:
 
 - **Built-in templates** (public defaults shipped with package):
   - `general`
@@ -190,7 +192,7 @@ Actions are workflow-local and optional.
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
     [
-      "setup-chat-workflows",
+      "opencode-chat-workflow-setup",
       {
         "partsDir": "projects/.opencode/chat-workflows",
         "projectPath": "projects/.opencode/chat-workflows/project.md",

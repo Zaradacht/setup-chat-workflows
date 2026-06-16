@@ -6,7 +6,7 @@ Repository exists.
 
 Suggested repository:
 
-- GitHub: `https://github.com/Zaradacht/setup-chat-workflows`
+- GitHub: `https://github.com/Zaradacht/opencode-chat-workflow-setup`
 
 ## 1. Final package review
 
@@ -42,7 +42,7 @@ npm publish
 
 If the package name is taken, suggested alternatives:
 
-- `@zaradacht/setup-chat-workflows`
+- `@zaradacht/opencode-chat-workflow-setup`
 - `opencode-structured-workflows`
 - `opencode-task-session setup`
 
@@ -55,7 +55,7 @@ Repository:
 Suggested entry:
 
 ```markdown
-- [setup-chat-workflows](https://github.com/Zaradacht/setup-chat-workflows) - Adds modular `/setup-chat-workflows`, `/start-session`, and `/workflow-template` commands for local-first workflow and template management.
+- [opencode-chat-workflow-setup](https://github.com/Zaradacht/opencode-chat-workflow-setup) - Adds modular `/setup-chat-workflows`, `/start-session`, and `/workflow-template` commands for local-first workflow and template management.
 ```
 
 ## 4. Release tags
@@ -67,9 +67,9 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-Current snapshot for v0.3.0:
+Current snapshot for v0.3.1:
 
 ```bash
-git tag v0.3.0
-git push origin v0.3.0
+git tag v0.3.1
+git push origin v0.3.1
 ```
