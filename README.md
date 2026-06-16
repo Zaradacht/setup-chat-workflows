@@ -1,73 +1,44 @@
 # setup-chat-workflows
 
-OpenCode plugin that adds workflow-aware chatbot commands for a structured way of working. It ships generic starter examples for:
+Structured chat sessions, shipped as an **OpenCode plugin**.
 
-- `general`
-- `pr-review`
-- `new-task`
+`setup-chat-workflows` lets teams define how a session should be started before any heavy lifting happens. A session workflow asks for the right context first, then hands off to existing actions/skills only when the session is confirmed.
 
-but these are only defaults. Teams can create any number of workflows such as `incident`, `release`, `design-review`, `support`, or anything else.
+It is a **public, generic plugin**. It does not depend on private Devkit infrastructure.
 
-The plugin installs:
+## Why this plugin exists
 
-- `/setup-chat-workflows` — walks the user through configuring the project's workflow tree.
-- `/start-session` — chooses or infers a workflow, asks only that workflow's required subset of questions, and starts only after the required session setup is satisfied or explicitly skipped.
+Different tasks need different setup before work can begin:
 
-## Human TL;DR
+- A general question often needs only a brief context.
+- A PR review needs PR links, review mode, and angle selection.
+- A task plan often needs milestones, gate decisions, and validation expectations.
 
-1. Install the plugin.
-2. Restart OpenCode.
-3. Run `/setup-chat-workflows` once.
-4. Choose what to set up: project defaults, workflows, post-run actions, or all of them.
-5. Restart OpenCode.
-6. Use `/start-session <what you want to do>`.
+`setup-chat-workflows` encodes those requirements in `workflows.md` so each project can control what gets asked and when.
 
-`/start-session` first asks the user to choose one configured workflow, then asks that selected workflow's own questionnaire, shows a brief, and starts after confirmation using `Start this workflow?`.
+## Commands (v0.3.0)
 
-Session post-run actions are optional follow-ups for the selected workflow only. The bundled examples use workflow skill names such as `wf-general`, `wf-pr_review`, and `wf-new_task`, followed by `/deepwork`.
+This plugin registers:
 
-## Agent TL;DR
+- `/setup-chat-workflows` — guided setup and editing of project workflow files.
+- `/start-session` — interactive startup: choose a workflow, answer its focused questions, confirm, then continue.
+- `/workflow-template` — create, list, explain, import, export, and create/update reusable markdown templates.
 
-- `/setup-chat-workflows` owns configuration. In managed workspaces it creates or updates `projects/.opencode/chat-workflows/project.md` and `workflows.md`.
-- Always ask what the user wants to edit first: starter set (`blank/custom`, `general+pr-review+new-task`, `incident/release`, `other`), project defaults only, workflow definitions only, post-run actions, or review current setup.
-- `/start-session` owns runtime session setup. It reads the configured workflow tree, asks a workflow-picker questionnaire first, then asks the selected workflow's own compact questionnaire, renders a brief, and waits for confirmation.
-- Do not combine workflow selection and workflow-specific questions into one form. After workflow selection, compact required structured questions, required text fields, optional context, and gates into that workflow's questionnaire. Do not print console fill-in blocks unless the `question` tool is unavailable or fails.
-- Post-run actions are scoped to the selected workflow. Apply the matching `## <workflow-name>` section only. Never run all actions globally.
-- Do not run post-run actions before the user confirms the workflow brief, and do not ask for a second action-confirmation prompt after the workflow confirmation.
+## What the flow looks like
 
-## Core lineage
-
-```text
-projects/.opencode/chat-workflows/project.md
-projects/.opencode/chat-workflows/workflows.md
-  -> injected into /setup-chat-workflows as editable setup parts
-  -> used to generate /start-session chat workflows
-```
-
-OpenCode loads plugins at startup, so after `/setup-chat-workflows` writes a new config, restart OpenCode to regenerate `/start-session` from the updated workflow tree.
-
-## Why
-
-Most coding sessions are not the same. A general question should not require PR-review metadata. A PR review should require a PR link and source task/card context. A new task should require a goal, milestones, and approval/review gates.
-
-This plugin lets a project define the required session setup subset per workflow. The workflow list is plug-and-play: edit `workflows.md` to add, remove, or rename workflows.
-
-## Workflows vs skills
-
-Skills are best for known tasks: once the agent already knows what needs to happen, a skill provides the repeatable playbook for doing it.
-
-Chat workflows run one step earlier. They ask the right questions to collect context, scope, gates, and subworkflow choices before execution starts. After the workflow brief is confirmed, workflow-local post-run actions hand off internally to the right skill, such as `wf-pr_review`, `wf-new_task`, or `/deepwork`, without leaking full skill instructions into the chat.
-
-In short:
-
-```text
-workflow = ask for the right context and scope
-skill = execute a known task with a repeatable playbook
-```
+1. **Install plugin** in `opencode.json` (or local file path for development).
+2. **Restart OpenCode**.
+3. Run `/setup-chat-workflows` to define:
+   - project defaults (`project.md`)
+   - workflow catalog (`workflows.md`)
+   - optional project templates (`templates/`)
+4. Confirm generated files, then **restart OpenCode**.
+5. Start work with `/start-session ...`.
+6. If needed, manage template packs with `/workflow-template`.
 
 ## Quickstart
 
-Install in `opencode.json`:
+Install plugin:
 
 ```json
 {
@@ -76,240 +47,141 @@ Install in `opencode.json`:
 }
 ```
 
-For local development:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": ["file:///absolute/path/to/setup-chat-workflows"]
-}
-```
-
-Restart OpenCode, then run:
+Run setup:
 
 ```text
 /setup-chat-workflows
 ```
 
-That creates:
+Then start a flow:
 
 ```text
-projects/.opencode/chat-workflows/project.md
-projects/.opencode/chat-workflows/workflows.md
+/start-session Review https://github.com/example/repo/pull/123
 ```
-
-Restart OpenCode again, then start work with:
 
 ```text
-/start-session Review https://github.com/acme/app/pull/123
+/start-session Implement the ticket https://trello.com/c/abc123
 ```
 
-or:
+## Core idea: workflows before skills
 
-```text
-/start-session Implement the Trello card https://trello.com/c/abc123
-```
+Skills are execution playbooks ("how to do X").
 
-## Workflow tree
+Workflows are intake questions ("what is needed before doing X").
 
-```text
-project workflow setup
-├── projects/.opencode/chat-workflows/project.md
-│   ├── project label
-│   ├── source systems
-│   ├── issue tracker / mirror behavior
-│   ├── external update destination
-│   ├── external update language/tone
-│   └── default approval/safety rules
-│
-├── projects/.opencode/chat-workflows/workflows.md
-│   ├── any number of workflow sections
-│   ├── each workflow defines required structured questions
-│   ├── each workflow defines required input fields
-│   ├── optional context fields
-│   ├── each workflow defines readiness/start gates
-│   ├── optional nested subworkflow sections
-│   └── workflow-local post-run actions (typically ending in /deepwork)
-│
-└── output
-    ├── write the chat-workflows files
-    ├── restart OpenCode
-    └── /start-session is generated from those parts
-```
+This plugin keeps that boundary clean:
 
-The example files included in this package define `general`, `pr-review`, and `new-task`, but the plugin itself does not require those names.
+- `/start-session` asks only the selected workflow’s required questions first.
+- It renders a concise workflow brief.
+- It confirms with the user once (`Start this workflow?`).
+- Only then does it proceed to configured post-run actions (for example `wf-pr_review`, `/deepwork`).
 
-## What `/setup-chat-workflows` asks
+## Built-in vs project template packs
 
-It uses chatbot-style prompting, not a custom UI.
+Two template sources are supported in v0.3.0:
 
-It should first ask what you want to create or update:
+- **Built-in templates** (public defaults shipped with package):
+  - `general`
+  - `pr-review`
+  - `new-task`
+  - `incident`
+  - `release`
+  - `design-review`
+- **Project templates** (your team-owned overrides/packs):
+  - defaults to `<partsDir>/templates`
+  - default `partsDir` is `projects/.opencode/chat-workflows` in managed workspaces,
+    or `.opencode/chat-workflows` otherwise.
 
-- blank/custom
-- general+pr-review+new-task
-- incident/release
-- other
-- project defaults only
-- workflow definitions only
-- workflow-local post-run actions
-- review current setup without writing
+Template variable syntax is `{{variable_name}}` (for example `{{project_label}}`, `{{workflow_name}}`).
 
-### 1. One setup form
+## `/workflow-template`: local-first template management
 
-It asks one compact setup form. The first field is what you want to create or update:
+Available operations:
 
-- blank/custom
-- general+pr-review+new-task
-- incident/release
-- other
-- project defaults only
-- workflow definitions only
-- workflow-local post-run actions
-- review current setup without writing
+- `list` — inspect available built-in and project templates.
+- `create` / `create-update` — create or update templates.
+- `explain` — show metadata, detected variables, and full template content.
+- `import` — load from local path or pasted text.
+- `export` — dump built-in, project, or both templates to a local markdown pack.
 
-The same form includes fields such as:
+Safety and behavior rules:
 
-- project source systems
-- issue tracker relationship
-- external update default
-- default language
-- starter workflow set: blank/custom, general+pr-review+new-task, incident/release, other
-- default start gate
-- workflow-local post-run actions
-- project label
-- default source systems / source URL guidance
-- default issue tracker project names or IDs
-- external update destination and tone
-- workflow names and required fields
-- workflow-local post-run actions or skill calls
-- approval / merge / completion rules
-- external posting and branch/policy bypass rules
+- **Local-first**: reads/writes are file-first; no remote fetching unless the user explicitly approves.
+- **Template replacement**:
+  - Prompt for missing values.
+  - Show a rendered preview before writing.
+  - Keep unknown placeholders by default unless user explicitly requests removal.
+- **No external posting by default** and no automatic remote source fetch.
 
-### 2. Rendered proposed markdown
-
-It renders the proposed files so the user can inspect them:
-
-```text
-projects/.opencode/chat-workflows/project.md
-projects/.opencode/chat-workflows/workflows.md
-```
-
-### 3. Confirmation before writing
-
-It asks:
-
-```text
-Write this chat workflows config?
-- Write config
-- Edit fields
-- Cancel
-```
-
-It writes only after confirmation.
-
-## If no config exists
-
-No existing config is required.
-
-If one or more chat-workflows files do not exist, `/setup-chat-workflows` treats the missing files as first-run setup and walks the user through creating them from scratch.
-
-Requirements:
-
-- OpenCode must allow `question`.
-- OpenCode must allow file read/write/edit.
-- The project directory, or at least `projects/.opencode/`, must be writable.
-- No external API keys or services are required.
-
-## What `/start-session` asks
-
-`/start-session` first chooses or infers workflow type from `projects/.opencode/chat-workflows/workflows.md`.
-
-It should ask a workflow picker first, then ask exactly one compact session questionnaire for the selected workflow. Required text fields, optional notes, and gate choices should be compacted into the selected workflow's questionnaire.
-
-The package examples include these starter workflows:
-
-### general
-
-- no required subset by default
-- can start after brief confirmation
-
-### pr-review
-
-Asks the PR-review-specific required subset:
-
-- PR URL
-- review mode (`review-only`, `review-and-fix`, `review-plan-and-fix`, `review-and-comment`, `review-and-merge`)
-- review angles (`general`, `source/scope`, `code/regression`, `validation/ops`)
-- source task/card/work-item link or explicit none
-- target branch unless defaulted
-- review scope (full PR or focused review free text)
-- files to review
-- additional files to include
-- merge expectation unless defaulted
-- external update expectation unless defaulted
-
-Default behavior:
-
-- No explicit user request for fixes/comments/merge defaults to `review-only`.
-- `full PR` or `focused review` controls default review-angle selection in the workflow implementation.
-- Full PR typically selects all relevant angles.
-- Focused reviews should include requested focus plus adjacent necessary angles.
-
-Optional context such as known risks, validation notes, and open notes should not trigger a second prompt unless the workflow explicitly marks those fields as required.
-
-### new-task
-
-Asks new-task-specific subset:
-
-- source task/card link
-- source system
-- goal
-- milestones to confirm
-- implementation expectation
-- plan approval gate
-- review depth/pass
-- completion/merge gate
-- validation expectations
-
-You can add more workflows by adding more `## <workflow-name>` sections to `workflows.md`. Put workflow-local post-run actions directly in each workflow or subworkflow.
-
-## Post-run actions / skills
-
-Each workflow can define post-run actions directly in `workflows.md`: optional next steps that `/start-session` runs after the user confirms the workflow brief. The brief confirmation is the only confirmation; do not add a second “confirm actions” prompt. Workflows can also contain nested subworkflows using `### <parent>/<subworkflow>` sections.
-
-They are not setup-time actions. They are workflow-specific handoffs such as:
-
-- for `general`: load/use the `wf-general` skill, then run `/deepwork` after workflow confirmation
-- for `new-task`: load/use the `wf-new_task` skill, then run `/deepwork` after workflow confirmation
-- for `pr-review`: load/use the `wf-pr_review` skill, then run `/deepwork` after workflow confirmation
-- for `incident`: suggest an incident-debugging checklist after workflow confirmation
-
-Examples:
+### Concise workflow/template snippet
 
 ```markdown
-- post-run actions: /your-planning-command, then /deepwork
-```
+template: quick-review
+name: Quick Review
+description: Fast PR review starter with focused defaults.
+variables:
+  - workflow_name
+  - review_mode
 
-Rules:
-
-- `/start-session` includes these actions in the rendered workflow brief.
-- It does not run them before confirmation.
-- The default expectation is to run them after confirmation.
-
-### Example: planning action for new-task
-
-For a project that should suggest a planning command for new tasks:
-
-```markdown
-### new-task
+## {{workflow_name}}
 
 - enabled: true
-- required structured questions: source task/card link; source system; implementation expectation; plan approval gate; review depth/pass; completion/merge gate; external update expectation
-- required input fields: goal; milestones to confirm; scope boundaries; validation expectations; open notes
-- default review depth/pass: strong/4-pass for risky work
-- start gate: do not start implementation until goal, milestones, and gates are answered or explicitly marked unknown/skip by the user
-- post-run actions: /your-planning-command, then /deepwork
+- purpose: Run a scoped review before implementation proceeds.
+- required structured questions: PR URL; review mode (`review-only`, `review-and-fix`, `review-and-comment`); review scope
+- required input fields: goal; changed files
+- optional context fields: risk notes; validation expectations
+- readiness/start gate: can start once PR URL, review mode, and scope are provided
+- post-run actions: wf-pr_review, then /deepwork
 ```
+
+## PR modes and review angles
+
+The built-in `pr-review` template includes common PR settings:
+
+- Review modes: `review-only`, `review-and-fix`, `review-plan-and-fix`, `review-and-comment`, `review-and-merge`
+- Review angles: `general`, `source/scope`, `code/regression`, `validation/ops`
+
+Defaults are configured per workflow/template and can be customized in your project files.
+
+## What gets created
+
+On first run, `/setup-chat-workflows` generates:
+
+```text
+projects/.opencode/chat-workflows/project.md
+projects/.opencode/chat-workflows/workflows.md
+```
+
+and optional templates in:
+
+```text
+projects/.opencode/chat-workflows/templates/
+```
+
+### Typical `workflows.md` shape
+
+```text
+## <workflow-name>
+- enabled: true
+- required structured questions: ...
+- required input fields: ...
+- optional context fields: ...
+- readiness/start gate: ...
+- post-run actions: /deepwork
+### <workflow-name>/<subworkflow-name> (optional)
+- inherited fields: ...
+```
+
+Nested subworkflows are supported via `### parent/subworkflow` sections.
+
+## Post-run actions
+
+Actions are workflow-local and optional.
+
+- Defined in each workflow block via `post-run actions`.
+- Applied only for the selected workflow/subworkflow.
+- Expected default is to run configured actions (commonly ending with `/deepwork`) after confirmation.
+- No action runs before explicit workflow confirmation.
 
 ## Options
 
@@ -323,6 +195,9 @@ For a project that should suggest a planning command for new tasks:
         "partsDir": "projects/.opencode/chat-workflows",
         "projectPath": "projects/.opencode/chat-workflows/project.md",
         "workflowsPath": "projects/.opencode/chat-workflows/workflows.md",
+        "templatesDir": "projects/.opencode/chat-workflows/templates",
+        "builtInTemplatesDir": "./templates",
+        "templateCommand": "workflow-template",
         "startSessionCommand": "start-session",
         "setupCommand": "setup-chat-workflows",
         "overwrite": false
@@ -332,39 +207,41 @@ For a project that should suggest a planning command for new tasks:
 }
 ```
 
-Options:
+Option notes:
 
-- `partsDir`: project-relative chat workflows directory. Defaults to `projects/.opencode/chat-workflows` when `projects/.opencode` exists, otherwise `.opencode/chat-workflows`.
-- `projectPath`: project-relative project defaults file.
-- `workflowsPath`: project-relative workflow catalog file.
-- `startSessionCommand`: command name for chat-workflow session setup.
-- `setupCommand`: command name for workflow setup.
-- `overwrite`: when `false`, existing commands are preserved.
+- `partsDir`: project relative root for workflow files (`project.md` + `workflows.md`).
+- `projectPath`: custom path for project defaults file.
+- `workflowsPath`: custom path for workflow catalog.
+- `templatesDir`: directory for project template markdown packs.
+- `builtInTemplatesDir`: directory for built-in templates (defaults to package `templates/`).
+- `templateCommand`: name of template command (defaults to `workflow-template`).
+- `startSessionCommand`: command name for session startup (defaults to `start-session`).
+- `setupCommand`: command name for setup command (defaults to `setup-chat-workflows`).
+- `overwrite`: keep `false` to preserve existing command mappings.
 
-## Sharing with a team
+## Requirements
 
-Commit `projects/.opencode/chat-workflows/*.md` if the workflow defaults are safe and useful for everyone on the project.
-
-Do not put secrets, raw tokens, or private credentials in the workflow config.
+- OpenCode must allow `question` + file read/write/edit.
+- Project directory (at least `projects/.opencode/`) must be writable.
+- No external API keys are required.
 
 ## Package contents
 
-- `index.js`: OpenCode plugin entrypoint
-- `examples/project.md`: example project defaults
-- `examples/workflows.md`: example workflow catalog using generic `general`, `pr-review`, and `new-task` starters
-- `README.md`: user docs
+- `index.js` (plugin entrypoint)
+- `examples/project.md` (starter project defaults)
+- `examples/workflows.md` (starter workflow catalog)
+- `templates/` (built-in templates)
+- `README.md`
 
-Source-only maintainer files such as `AGENTS.md` and `PUBLISHING.md` are intentionally not included in the npm package.
+Maintainer files such as `AGENTS.md` and `PUBLISHING.md` are excluded from npm packaging.
 
-## Publish
+## Publishing notes
 
-1. Confirm the package name.
+1. Confirm package metadata.
 2. Run `npm pack --dry-run`.
 3. Publish to npm.
-4. Submit to `https://github.com/awesome-opencode/awesome-opencode`.
+4. Submit plugin to `https://github.com/awesome-opencode/awesome-opencode`.
 
-Suggested awesome-opencode description:
+Suggested registry description:
 
-> Adds workflow-aware `/setup-chat-workflows` and `/start-session` commands for general, PR-review, and new-task session setup, backed by a per-project workflow tree.
->
-> Alternative generic wording: Adds modular workflow-aware `/setup-chat-workflows` and `/start-session` commands backed by plug-and-play project and workflow files with workflow-local post-run actions.
+> Adds `/setup-chat-workflows`, `/start-session`, and `/workflow-template` for local-first workflow setup with reusable markdown templates (`{{variable_name}}` placeholders), configurable post-session actions, and generic public defaults.
