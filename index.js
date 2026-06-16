@@ -106,10 +106,10 @@ function actionsExplanation() {
 
 They are not setup-time actions. They are workflow-specific handoffs such as:
 
-- for \`new-task\`: suggest or run a planning command after intake confirmation
-- for \`pr-review\`: load/use the \`pr-review\` skill after intake confirmation
+- for \`general\`: load/use the \`wf-general\` skill after intake confirmation
+- for \`new-task\`: load/use the \`wf-new_task\` skill after intake confirmation
+- for \`pr-review\`: load/use the \`wf-pr_review\` skill after intake confirmation
 - for \`incident\`: suggest an incident-debugging checklist after intake confirmation
-- for \`general\`: no action
 
 Typical policies:
 

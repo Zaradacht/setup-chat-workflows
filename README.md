@@ -24,7 +24,7 @@ The plugin installs:
 
 `/start-session` first asks the user to choose one configured workflow, then asks that selected workflow's own questionnaire, shows a brief, and starts after confirmation.
 
-Post-intake actions are optional follow-ups for the selected workflow only. Example: `new-task` can suggest a planning command after confirmation, while `general` can have no action.
+Post-intake actions are optional follow-ups for the selected workflow only. The bundled examples use workflow skill names such as `wf-general`, `wf-pr_review`, and `wf-new_task`.
 
 ## Agent TL;DR
 
@@ -256,10 +256,10 @@ Each workflow can define post-intake actions: optional next steps that `/start-s
 
 They are not setup-time actions. They are workflow-specific handoffs such as:
 
-- for `new-task`: suggest or run a planning command after intake confirmation
-- for `pr-review`: load/use the `pr-review` skill after intake confirmation
+- for `general`: load/use the `wf-general` skill after intake confirmation
+- for `new-task`: load/use the `wf-new_task` skill after intake confirmation
+- for `pr-review`: load/use the `wf-pr_review` skill after intake confirmation
 - for `incident`: suggest an incident-debugging checklist after intake confirmation
-- for `general`: no action
 
 Examples:
 
