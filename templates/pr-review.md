@@ -5,6 +5,7 @@ description: Review an existing pull request with focused gates.
 variables:
   - workflow_name
   - project_label
+  - workflow_components
   - source_system
   - default_review_mode
   - workflow_post_actions
@@ -14,7 +15,8 @@ variables:
 
 - enabled: true
 - purpose: Review a pull request for {{project_label}} with scoped checks.
-- required structured questions: PR URL; review mode (`review-only`, `review-and-fix`, `review-and-comment`)
+- components: {{workflow_components}}
+- required structured questions: PR URL; review mode (from review component unless inferable); optional source link; optional review focus
 - required input fields: none
 - optional context fields: source system; review scope; review angles; merge expectation; validation expectation; known risks
 - readiness/start gate: can start when PR URL is present and review mode is selected (or defaulted)

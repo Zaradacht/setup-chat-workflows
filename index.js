@@ -224,14 +224,17 @@ function setupTree(paths) {
     `${paths.dir}/`,
     "├── project.md",
     "│   ├── project defaults",
+    "│   ├── component registry",
     "│   ├── source systems",
     "│   ├── issue tracker / mirror behavior",
     "│   ├── external update defaults",
     "│   ├── validation defaults",
-    "│   └── safety / posting / bypass rules",
+    "│   ├── safety / posting / bypass rules",
+    "│   └── session cleanup defaults",
     "│",
     "├── workflows.md",
     "│   ├── workflow sections",
+    "│   ├── component references (`components:` lines)",
     "│   ├── required structured questions",
     "│   ├── required input fields",
     "│   ├── optional context fields",
@@ -273,13 +276,13 @@ function templateManagerTemplate(paths, templates, templateCommand) {
 }
 
 function setupTemplateV032(paths, parts, templates, templateCommand) {
-  return `# Setup Chat Workflows (v0.3.2)
+  return `# Setup Chat Workflows (v0.3.3)
 
 Considering optional prefill input:
 
 $ARGUMENTS
 
-Set up this project's structured chat workflows. The setup is modular and upgradeable: project defaults live in project.md; workflow definitions and workflow-local post-run actions live in workflows.md.
+Set up this project's structured chat workflows. The setup is modular and upgradeable: project defaults and component registry live in project.md; workflow definitions, workflow-local components, and post-run actions live in workflows.md.
 
 ${setupTree(paths)}
 
@@ -296,8 +299,11 @@ Rules:
 - There is no separate actions file. Put post-run actions directly in each workflow or subworkflow.
 - Workflows may contain nested subworkflows using ### <parent>/<subworkflow> sections or a subworkflows: field.
 - Do not assume workflows are named general/pr-review/new-task. Those are examples only.
+- \`project.md\` is the owner of reusable workflow components (for example project selectors, review skill bundles, cleanup behavior, achievement/message formats, tool sets, and subworkflow helpers).
+- \`workflows.md\` must use \`components:\` references instead of duplicating component-backed lists.
 - Project templates are optional.
 - Built-in package templates are always available and should be seeded only when a project wants editable copies.
+- Keep component usage DRY: repository/project lists, review skill bundles, cleanup behavior, and achievement/message formats should be defined on components in \`project.md\`, then referenced via \`components:\` in \`workflows.md\` or lifecycle commands.
 - Do not post external comments or status updates. This command only writes local chat-workflow files.
 
 First-run behavior:
@@ -310,14 +316,15 @@ First-run behavior:
 
 Template flow:
 
-- Mention available project templates and built-in templates before editing.
-- Ask if user wants to seed workflows.md from a template and seed template files into the project templates directory before manual editing.
-- If a template is chosen, render and show a preview for inserted sections before continuing.
+ - Mention available project templates and built-in templates before editing.
+ - Ask if user wants to seed workflows.md from a template and seed template files into the project templates directory before manual editing.
+ - If a template is chosen, render and show a preview for inserted sections before continuing.
+ - When writing source defaults, recommend component-first patterns (for example 'component project-selector: ...', 'component cleanup: ...', 'component achievement: ...', 'component message: ...', 'components: project-selector; review').
 `;
 }
 
 function startSessionTemplateV032(paths, parts) {
-  return `# Start Session Chat Workflows (v0.3.2)
+  return `# Start Session Chat Workflows (v0.3.3)
 
 Considering optional prefill input:
 
@@ -338,29 +345,37 @@ Chat-workflows files injected at OpenCode startup:
 
 ${injectedParts(parts)}
 
-Step 1: choose the workflow.
+Step 1: choose the workflow first.
 
-- Use workflow names from ${paths.workflows}.
-- Include enabled top-level workflows and enabled nested subworkflows.
-- Start with a workflow picker using the question tool unless arguments uniquely identify one workflow.
+ - Use workflow names from '${paths.workflows}'.
+ - Include enabled top-level workflows and enabled nested subworkflows declared as '### <parent>/<subworkflow>' or via a workflow's 'subworkflows:' field.
+ - Always start with a workflow picker using the 'question' tool unless $ARGUMENTS unambiguously names exactly one configured workflow or subworkflow.
 
-Step 2: apply project defaults first, then ask minimally.
+Step 2: resolve components and project defaults, then ask minimally.
 
-- Read defaults from ${paths.project} and apply matching values to required inputs.
-- Do not re-ask required fields already provided by project defaults.
-- Include defaults used under a brief section named defaults applied.
-- Ask optional context only if it is required to resolve ambiguity.
-- Ask only once; keep each required field concise.
+ - Read component registry entries from '${paths.project}' (lines starting '- component <name>:').
+ - Read the selected workflow/subworkflow 'components:' list and merge component-backed defaults into the workflow requirements before asking.
+ - For required fields backed by 'project-selector': ask as one concise choice from its 'choices' list and include 'cross-project' / 'other/free text' based on the component flags.
+ - For required fields backed by 'review': use component 'modes', 'skills/actions', and default mode only if not inferable from context.
+ - For lifecycle cleanup, read a 'cleanup' component from project defaults when present and include it in end-of-session handoffs/runbooks; cleanup components should restore touched git repositories to the latest default branch after git/PR activity.
+ - For lifecycle achievement capture, read 'achievement' and 'message' components from project defaults when present; include PR link, ticket/source link, repo/project, ownership, status, validation, cleanup, impact, and next action in reusable metadata for daily wrapups.
+- Subworkflows inherit parent workflow requirements unless they explicitly override or narrow them.
+- Use the 'question' tool (not freeform text).
+- Omit questions already answered by $ARGUMENTS or project defaults unless confirmation is explicitly required.
+ - Include omitted default-derived values in the rendered workflow brief under 'defaults applied'.
 
 Step 3: render workflow brief and confirm.
 
 - Summarize gathered values, required and defaulted, in the workflow brief.
 - Ask once to start this workflow.
-- Only after this confirmation run workflow-local post-run actions from the selected workflow.
+- Only after this confirmation run workflow-local post-run actions plus any workflow-component actions.
 - Do not run any post-run action before confirmation.
-- Include PR review modes/options only when the workflow declares them.
+- If a component declares skills/actions and the workflow does not explicitly override them, use the component actions instead of in-line hard-coded skill lists.
+ - Ask about mode values only when the selected workflow includes a 'review'-style component that exposes them.
 `;
 }
+
+// Kept for compatibility only; setup/start-session command templates above are versioned.
 
 function templateManagerTemplateV032(paths, templates, templateCommand) {
   return `# Workflow Template Manager (${templateCommand})

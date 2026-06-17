@@ -18,7 +18,7 @@ Different tasks need different setup before work can begin:
 
 `opencode-chat-workflow-setup` encodes those requirements in `workflows.md` so each project can control what gets asked and when.
 
-## Commands (v0.3.2)
+## Commands (v0.3.3)
 
 This plugin registers:
 
@@ -64,7 +64,7 @@ Then start a flow:
 ```
 
 ```text
-/start-session Implement the ticket https://trello.com/c/abc123
+/start-session Implement the ticket https://tracker.example.com/TICKET-123
 ```
 
 ## Core idea: workflows before skills
@@ -79,11 +79,12 @@ This plugin keeps that boundary clean:
 - Project defaults from `project.md` are pre-applied. Required fields already satisfied by defaults are shown under a concise `defaults applied` section instead of being re-asked.
 - It renders a concise workflow brief.
 - It confirms with the user once (`Start this workflow?`).
-- Only then does it proceed to configured post-run actions (for example `wf-pr_review`, `/deepwork`).
+- Only then does it proceed to configured post-run actions (for example `wf-pr_review`, `/deepwork`), or to actions declared by referenced components.
+- Lifecycle commands such as `/end-session` can also use components, for example a `cleanup` component that restores touched git repositories to the latest default branch before closing.
 
 ## Built-in vs project template packs
 
-Two template sources are supported in v0.3.2:
+Two template sources are supported:
 
 - **Built-in templates** (public defaults shipped with package):
   - `general`
@@ -133,6 +134,7 @@ name: Quick Review
 description: Fast PR review starter with focused defaults.
 variables:
   - workflow_name
+  - workflow_components
   - review_mode
 
 ## {{workflow_name}}
@@ -148,12 +150,39 @@ variables:
 
 ## PR modes and review angles
 
-The built-in `pr-review` template now keeps required prompts minimal:
+The built-in `pr-review` template now stays minimal and references review components for executable behavior:
 
-- Review modes: `review-only`, `review-and-fix`, `review-and-comment`
-- Review angles: `general`, `source/scope`, `code/regression`, `validation/ops`
+- Set `components:` to `project-selector; review` (or a custom selector/review component pair).
+- `review` component values (modes, default mode, and actions) are configured in `project.md`.
+- `workflows.md` then delegates hard-coded behavior to components.
 
-Defaults are configured per workflow/template and can be customized in your project files.
+Default-aware behavior stays controlled per project while keeping workflow files reusable.
+
+## Workflow components (first-class)
+
+Components make project defaults and workflow behavior reusable.
+
+In `project.md`, components are declared once and can be reused by any workflow:
+
+```text
+- component project-selector: concerned repository/project selector; choices: `repo-a`; `repo-b`; include cross-project: true; include free text: true
+- component review: PR review orchestration; skills/actions: wf-pr_review, pr-review-all; default mode: review-only; modes: review-only, review-and-fix, review-and-comment
+- component cleanup: end-session repository cleanup; when git used or PR merged: fetch/pull latest default branch and leave repository on default branch; applies to: selected project-selector value; skip dirty repos unless user approves stash/commit/discard
+- component achievement: end-session achievement capture; fields: ticket/source link, PR link, repo/project, ownership, status, validation, cleanup, impact, next action
+- component message: reusable wrap-up metadata line; format: Metadata: ticket/source: <link or none>; PR: <link or none>; repo/project: <value or unknown>; status: <status>; validation: <evidence or not run>; cleanup: <status>; next: <next action or none known>
+```
+
+In `workflows.md`, reference components instead of repeating lists:
+
+```text
+- components: project-selector; review
+```
+
+The `/start-session` template resolves `components:` first, then applies project defaults and asks only missing fields.
+
+Lifecycle commands can resolve the same component registry. A `/end-session` workflow should use `component cleanup` when present: if git was used, commits were pushed, or a PR was merged/completed, each touched repository should be returned to the default branch and updated from remote before the session closes. Dirty working trees must not be discarded silently.
+
+`component achievement` and `component message` let end-session capture enough reusable source material for daily wrapups: source/ticket link, PR link, repo/project, ownership, status, validation, cleanup, impact, and concrete next action. The metadata line is internal source material; daily-wrapup can decide whether to include or omit links in the final audience-facing text.
 
 ## What gets created
 
