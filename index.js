@@ -272,6 +272,148 @@ function templateManagerTemplate(paths, templates, templateCommand) {
   return `# Workflow Template Manager (${templateCommand})\n\nConsidering optional prefill input:\n\n$ARGUMENTS\n\nManage workflow template packs for this project and this plugin package.\n\nTemplate locations:\n\n${templateDirectoryBlock(paths)}\n\n${templateCatalogBlock(templates)}\n\nTemplate grammar:\n\n- Templates are markdown files from \`${paths.templates}\` and \`${paths.builtInTemplates}\`.\n- Template variables use the exact token format \`{{variable_name}}\` in template bodies.\n- Template content should remain generic and local-only.\n- Never fetch remote URLs automatically. Remote imports require explicit user approval before any fetch action.\n\nSupported operations:\n\n- list\n- create\n- explain\n- import\n- export\n- create-update\n\nCommon flow:\n\n- Start by inferring mode from $ARGUMENTS; otherwise ask one compact \`question\` field for mode.\n- list:\n  - render compact catalog only.\n- explain:\n  - ask for one template ID, then show metadata, variables, and full content.\n- create and create-update:\n  - ask for template ID/path and content source.\n  - prefer pasted markdown content; allow local file path input.\n  - if URL is supplied, ask for explicit permission before importing and only proceed on approval.\n  - extract all placeholders, ask missing values once, render preview, and ask confirmation before writing.\n  - unresolved placeholders remain as \`{{variable_name}}\` unless the user says remove them.\n- import:\n  - accepts local path and pasted text, and delegates to create/update flow.\n  - remote imports are blocked unless user explicitly approves and a fetch tool is available.\n- export:\n  - ask whether to export built-in, project, or both, then destination path (default: ${paths.templates}/templates-export.md).\n  - render combined export pack and confirm before writing.\n\nTemplate replacement behavior for this command:\n\n1. Always ask for required values before writing.\n2. Render a preview with replacements before any file write.\n3. Unknown variables stay in place by default.\n4. Unknown variables are removed only if user explicitly approves removal.\n\nThis command is local-only. Keep all downstream skill handoffs quiet/internal.`;
 }
 
+function setupTemplateV032(paths, parts, templates, templateCommand) {
+  return `# Setup Chat Workflows (v0.3.2)
+
+Considering optional prefill input:
+
+$ARGUMENTS
+
+Set up this project's structured chat workflows. The setup is modular and upgradeable: project defaults live in project.md; workflow definitions and workflow-local post-run actions live in workflows.md.
+
+${setupTree(paths)}
+
+${templateDirectoryBlock(paths)}
+
+Current injected setup files at OpenCode startup:
+
+${injectedParts(parts)}
+
+${templateCatalogBlock(templates)}
+
+Rules:
+
+- There is no separate actions file. Put post-run actions directly in each workflow or subworkflow.
+- Workflows may contain nested subworkflows using ### <parent>/<subworkflow> sections or a subworkflows: field.
+- Do not assume workflows are named general/pr-review/new-task. Those are examples only.
+- Project templates are optional.
+- Built-in package templates are always available and should be seeded only when a project wants editable copies.
+- Do not post external comments or status updates. This command only writes local chat-workflow files.
+
+First-run behavior:
+
+1. State which of the two core files are missing.
+2. Ask one compact question-based flow for what to create or update.
+3. Render proposed markdown for project.md and workflows.md.
+4. Ask for confirmation before writing.
+5. On confirmation, create ${paths.dir}, write files, verify they exist, and instruct to restart OpenCode.
+
+Template flow:
+
+- Mention available project templates and built-in templates before editing.
+- Ask if user wants to seed workflows.md from a template and seed template files into the project templates directory before manual editing.
+- If a template is chosen, render and show a preview for inserted sections before continuing.
+`;
+}
+
+function startSessionTemplateV032(paths, parts) {
+  return `# Start Session Chat Workflows (v0.3.2)
+
+Considering optional prefill input:
+
+$ARGUMENTS
+
+Start a structured chat workflow using the project chat-workflows files.
+
+Lineage:
+
+~~~text
+${paths.project}
+${paths.workflows}
+  -> injected into /setup-chat-workflows as editable setup files
+  -> used to generate /start-session chat workflows
+~~~
+
+Chat-workflows files injected at OpenCode startup:
+
+${injectedParts(parts)}
+
+Step 1: choose the workflow.
+
+- Use workflow names from ${paths.workflows}.
+- Include enabled top-level workflows and enabled nested subworkflows.
+- Start with a workflow picker using the question tool unless arguments uniquely identify one workflow.
+
+Step 2: apply project defaults first, then ask minimally.
+
+- Read defaults from ${paths.project} and apply matching values to required inputs.
+- Do not re-ask required fields already provided by project defaults.
+- Include defaults used under a brief section named defaults applied.
+- Ask optional context only if it is required to resolve ambiguity.
+- Ask only once; keep each required field concise.
+
+Step 3: render workflow brief and confirm.
+
+- Summarize gathered values, required and defaulted, in the workflow brief.
+- Ask once to start this workflow.
+- Only after this confirmation run workflow-local post-run actions from the selected workflow.
+- Do not run any post-run action before confirmation.
+- Include PR review modes/options only when the workflow declares them.
+`;
+}
+
+function templateManagerTemplateV032(paths, templates, templateCommand) {
+  return `# Workflow Template Manager (${templateCommand})
+
+Considering optional prefill input:
+
+$ARGUMENTS
+
+Manage workflow template packs for this project and this plugin package.
+
+Template locations:
+
+${templateDirectoryBlock(paths)}
+
+${templateCatalogBlock(templates)}
+
+Template grammar:
+
+- Templates are markdown files from ${paths.templates} (project templates) and ${paths.builtInTemplates} (built-in templates).
+- Template variables use {{variable_name}} token syntax.
+- Project templates are optional; built-in templates are always available from the package install path.
+- Never fetch remote URLs automatically. Remote imports require explicit user approval before any fetch action.
+
+Supported operations:
+
+- list
+- create
+- explain
+- import
+- export
+- create-update
+- seed
+
+Common flow:
+
+- list: render compact catalog only.
+- explain: show metadata, detected variables, and full template content.
+- create/create-update: ask for template id and source, prefer pasted markdown, allow local file path, require missing values once, preview, then confirm before write.
+- import: accepts local path or pasted content; delegates to create/update flow; remote paths stay blocked without explicit user approval.
+- export: choose built-in/project/both, default path ${paths.templates}/templates-export.md, render and confirm before writing.
+- seed: copy built-in templates into ${paths.templates}, optionally adapting placeholders to project conventions.
+  - Render a preview for each copied template first.
+  - Ask for confirmation before writing and report whether files are created or overwritten.
+
+Template replacement behavior for this command:
+
+- Ask for required values once.
+- Render preview before writing.
+- Preserve unknown placeholders unless user asks to remove.
+- Keep local-first and approval-gated remote behavior.
+`;
+}
+
 async function defaultPartsDir(root) {
   if (await pathExists(resolvePath(root, "projects/.opencode"))) return MANAGED_WORKSPACE_PARTS_DIR;
   return DEFAULT_PARTS_DIR;
@@ -324,21 +466,21 @@ export default async function opencodeWorkflowSessionSetup(input = {}, options =
       if (overwrite || !config.command[startSessionCommand]) {
         config.command[startSessionCommand] = {
           description: "Start chat-workflow session setup",
-          template: startSessionTemplate(paths, parts),
+          template: startSessionTemplateV032(paths, parts),
         };
       }
 
       if (overwrite || !config.command[setupCommand]) {
         config.command[setupCommand] = {
           description: "Configure project chat workflows",
-          template: setupTemplate(paths, parts, templates, templateCommand),
+          template: setupTemplateV032(paths, parts, templates, templateCommand),
         };
       }
 
       if (overwrite || !config.command[templateCommand]) {
         config.command[templateCommand] = {
           description: "Manage workflow templates",
-          template: templateManagerTemplate(paths, templates, templateCommand),
+          template: templateManagerTemplateV032(paths, templates, templateCommand),
         };
       }
     },

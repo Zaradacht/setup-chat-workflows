@@ -13,8 +13,8 @@ variables:
 
 - enabled: true
 - purpose: Review design or architecture decisions for {{project_label}} in {{design_area}}.
-- required structured questions: design doc location; scope of decision; stakeholders; risk of backwards compatibility; security review required; performance impact; accessibility impact; timeline constraints
-- required input fields: problem statement; alternatives considered; acceptance criteria; unknowns
-- optional context fields: diagrams/attachments; previous implementation history; implementation notes
-- readiness/start gate: require design doc location, scope, at least one stakeholder, and acceptance criteria
+- required structured questions: design doc location; scope decision; acceptance criteria
+- required input fields: none
+- optional context fields: stakeholders; compatibility risk; performance/security notes; accessibility impact
+- readiness/start gate: can start once design doc, scope decision, and acceptance criteria are provided (or defaulted)
 - post-run actions: {{workflow_post_actions}}

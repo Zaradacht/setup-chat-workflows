@@ -67,9 +67,9 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-Current snapshot for v0.3.1:
+Current snapshot for v0.3.2:
 
 ```bash
-git tag v0.3.1
-git push origin v0.3.1
+git tag v0.3.2
+git push origin v0.3.2
 ```

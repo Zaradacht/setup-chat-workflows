@@ -18,13 +18,13 @@ Different tasks need different setup before work can begin:
 
 `opencode-chat-workflow-setup` encodes those requirements in `workflows.md` so each project can control what gets asked and when.
 
-## Commands (v0.3.1)
+## Commands (v0.3.2)
 
 This plugin registers:
 
 - `/setup-chat-workflows` — guided setup and editing of project workflow files.
 - `/start-session` — interactive startup: choose a workflow, answer its focused questions, confirm, then continue.
-- `/workflow-template` — create, list, explain, import, export, and create/update reusable markdown templates.
+- `/workflow-template` — create, list, explain, import, export, create/update, and seed reusable markdown templates.
 
 ## What the flow looks like
 
@@ -36,7 +36,9 @@ This plugin registers:
    - optional project templates (`templates/`)
 4. Confirm generated files, then **restart OpenCode**.
 5. Start work with `/start-session ...`.
-6. If needed, manage template packs with `/workflow-template`.
+6. If needed, manage template packs with `/workflow-template` (including seeding built-ins into your local `templates/` directory).
+
+For fast setup flow, `/start-session` applies matching project defaults automatically and only asks required fields that are still missing.
 
 ## Quickstart
 
@@ -73,14 +75,15 @@ Workflows are intake questions ("what is needed before doing X").
 
 This plugin keeps that boundary clean:
 
-- `/start-session` asks only the selected workflow’s required questions first.
+- `/start-session` asks required fields first; optional context is requested only when needed.
+- Project defaults from `project.md` are pre-applied. Required fields already satisfied by defaults are shown under a concise `defaults applied` section instead of being re-asked.
 - It renders a concise workflow brief.
 - It confirms with the user once (`Start this workflow?`).
 - Only then does it proceed to configured post-run actions (for example `wf-pr_review`, `/deepwork`).
 
 ## Built-in vs project template packs
 
-Two template sources are supported in v0.3.1:
+Two template sources are supported in v0.3.2:
 
 - **Built-in templates** (public defaults shipped with package):
   - `general`
@@ -103,8 +106,15 @@ Available operations:
 - `list` — inspect available built-in and project templates.
 - `create` / `create-update` — create or update templates.
 - `explain` — show metadata, detected variables, and full template content.
-- `import` — load from local path or pasted text.
+- `import` — load from local path or pasted text (remote imports only after explicit approval).
 - `export` — dump built-in, project, or both templates to a local markdown pack.
+- `seed` — copy built-in templates into project `templates/` as editable local copies.
+
+Template behavior:
+
+- Built-in package templates are always available, even before seeding.
+- Seeding renders a preview before writing, then asks for confirmation.
+- Project templates are optional; teams can skip seeding and keep package defaults as references only.
 
 Safety and behavior rules:
 
@@ -138,9 +148,9 @@ variables:
 
 ## PR modes and review angles
 
-The built-in `pr-review` template includes common PR settings:
+The built-in `pr-review` template now keeps required prompts minimal:
 
-- Review modes: `review-only`, `review-and-fix`, `review-plan-and-fix`, `review-and-comment`, `review-and-merge`
+- Review modes: `review-only`, `review-and-fix`, `review-and-comment`
 - Review angles: `general`, `source/scope`, `code/regression`, `validation/ops`
 
 Defaults are configured per workflow/template and can be customized in your project files.
@@ -246,4 +256,4 @@ Maintainer files such as `AGENTS.md` and `PUBLISHING.md` are excluded from npm p
 
 Suggested registry description:
 
-> Adds `/setup-chat-workflows`, `/start-session`, and `/workflow-template` for local-first workflow setup with reusable markdown templates (`{{variable_name}}` placeholders), configurable post-session actions, and generic public defaults.
+> Adds `/setup-chat-workflows`, `/start-session`, and `/workflow-template` for local-first workflow setup with reusable markdown templates (`{{variable_name}}` placeholders), default-aware intake, configurable post-session actions, and generic public defaults.
