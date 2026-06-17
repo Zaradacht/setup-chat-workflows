@@ -276,7 +276,7 @@ function templateManagerTemplate(paths, templates, templateCommand) {
 }
 
 function setupTemplateV032(paths, parts, templates, templateCommand) {
-  return `# Setup Chat Workflows (v0.3.3)
+  return `# Setup Chat Workflows (v0.3.4)
 
 Considering optional prefill input:
 
@@ -299,11 +299,11 @@ Rules:
 - There is no separate actions file. Put post-run actions directly in each workflow or subworkflow.
 - Workflows may contain nested subworkflows using ### <parent>/<subworkflow> sections or a subworkflows: field.
 - Do not assume workflows are named general/pr-review/new-task. Those are examples only.
-- \`project.md\` is the owner of reusable workflow components (for example project selectors, review skill bundles, cleanup behavior, achievement/message formats, tool sets, and subworkflow helpers).
+- \`project.md\` is the owner of reusable workflow components (for example project selectors, review skill bundles, repo-refresh/cleanup behavior, achievement/message formats, tool sets, and subworkflow helpers).
 - \`workflows.md\` must use \`components:\` references instead of duplicating component-backed lists.
 - Project templates are optional.
 - Built-in package templates are always available and should be seeded only when a project wants editable copies.
-- Keep component usage DRY: repository/project lists, review skill bundles, cleanup behavior, and achievement/message formats should be defined on components in \`project.md\`, then referenced via \`components:\` in \`workflows.md\` or lifecycle commands.
+- Keep component usage DRY: repository/project lists, review skill bundles, repo-refresh/cleanup behavior, and achievement/message formats should be defined on components in \`project.md\`, then referenced via \`components:\` in \`workflows.md\` or lifecycle commands.
 - Do not post external comments or status updates. This command only writes local chat-workflow files.
 
 First-run behavior:
@@ -319,12 +319,12 @@ Template flow:
  - Mention available project templates and built-in templates before editing.
  - Ask if user wants to seed workflows.md from a template and seed template files into the project templates directory before manual editing.
  - If a template is chosen, render and show a preview for inserted sections before continuing.
- - When writing source defaults, recommend component-first patterns (for example 'component project-selector: ...', 'component cleanup: ...', 'component achievement: ...', 'component message: ...', 'components: project-selector; review').
+ - When writing source defaults, recommend component-first patterns (for example 'component project-selector: ...', 'component review: ...', 'component repo-refresh: ...', 'component cleanup: ...', 'component achievement: ...', 'component message: ...', 'components: project-selector; review; repo-refresh').
 `;
 }
 
 function startSessionTemplateV032(paths, parts) {
-  return `# Start Session Chat Workflows (v0.3.3)
+  return `# Start Session Chat Workflows (v0.3.4)
 
 Considering optional prefill input:
 
@@ -357,7 +357,9 @@ Step 2: resolve components and project defaults, then ask minimally.
  - Read the selected workflow/subworkflow 'components:' list and merge component-backed defaults into the workflow requirements before asking.
  - For required fields backed by 'project-selector': ask as one concise choice from its 'choices' list and include 'cross-project' / 'other/free text' based on the component flags.
  - For required fields backed by 'review': use component 'modes', 'skills/actions', and default mode only if not inferable from context.
- - For lifecycle cleanup, read a 'cleanup' component from project defaults when present and include it in end-of-session handoffs/runbooks; cleanup components should restore touched git repositories to the latest default branch after git/PR activity.
+  - For start-time repo refresh, read a 'repo-refresh' component from project defaults when present and use it after user confirms Start and before workflow/component post-run actions.
+  - Resolve the target branch for repo-refresh by checking 'origin/HEAD', then known symbolic branch data, and finally the component default branch; ask only if ambiguous.
+ - For lifecycle cleanup, read a 'cleanup' component from project defaults when present and include it in end-of-session handoffs/runbooks.
  - For lifecycle achievement capture, read 'achievement' and 'message' components from project defaults when present; include PR link, ticket/source link, repo/project, ownership, status, validation, cleanup, impact, and next action in reusable metadata for daily wrapups.
 - Subworkflows inherit parent workflow requirements unless they explicitly override or narrow them.
 - Use the 'question' tool (not freeform text).
@@ -368,14 +370,12 @@ Step 3: render workflow brief and confirm.
 
 - Summarize gathered values, required and defaulted, in the workflow brief.
 - Ask once to start this workflow.
-- Only after this confirmation run workflow-local post-run actions plus any workflow-component actions.
+- Only after this confirmation run repo-refresh first if configured, then workflow-local post-run actions plus any workflow-component actions.
 - Do not run any post-run action before confirmation.
 - If a component declares skills/actions and the workflow does not explicitly override them, use the component actions instead of in-line hard-coded skill lists.
  - Ask about mode values only when the selected workflow includes a 'review'-style component that exposes them.
 `;
 }
-
-// Kept for compatibility only; setup/start-session command templates above are versioned.
 
 function templateManagerTemplateV032(paths, templates, templateCommand) {
   return `# Workflow Template Manager (${templateCommand})

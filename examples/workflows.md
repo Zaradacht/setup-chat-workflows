@@ -25,7 +25,7 @@
 
 - enabled: true
 - purpose: plan or implement a new task, feature, bug fix, investigation, or documentation change
-- components: project-selector
+- components: project-selector; repo-refresh
 - required structured questions: source link or explicit none; task goal; expected outcome
 - required input fields: goal; milestones; scope boundaries; validation expectations; open notes
 - optional context fields: constraints; known risks; implementation notes; open notes

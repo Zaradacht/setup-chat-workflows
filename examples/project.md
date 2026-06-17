@@ -11,6 +11,7 @@
 - branch/policy bypass: never bypass unless explicitly requested for a specific PR in the current turn
 - component project-selector: concerned repository/project selector; choices: `repo-a`; `repo-b`; include cross-project: true; include free text: true
 - component review: PR review orchestration; skills/actions: wf-pr_review, pr-review-all; default mode: review-only; modes: review-only, review-and-fix, review-and-comment
+- component repo-refresh: start-session repository refresh; after start confirmation: require clean git status, switch to detected/default branch, fetch/pull latest default branch; default branch: main; applies to: selected project-selector value or current repository; skip dirty repos unless user approves stash/commit/discard
 - component cleanup: end-session repository cleanup; when git used or PR merged: fetch/pull latest default branch and leave repository on default branch; applies to: selected project-selector value; skip dirty repos unless user approves stash/commit/discard
 - component achievement: end-session achievement capture; fields: ticket/source link, PR link, repo/project, ownership, status, validation, cleanup, impact, next action
 - component message: reusable wrap-up metadata line; format: Metadata: ticket/source: <link or none>; PR: <link or none>; repo/project: <value or unknown>; status: <status>; validation: <evidence or not run>; cleanup: <status>; next: <next action or none known>

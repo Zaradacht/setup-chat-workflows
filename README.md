@@ -18,7 +18,7 @@ Different tasks need different setup before work can begin:
 
 `opencode-chat-workflow-setup` encodes those requirements in `workflows.md` so each project can control what gets asked and when.
 
-## Commands (v0.3.3)
+## Commands (v0.3.4)
 
 This plugin registers:
 
@@ -80,7 +80,7 @@ This plugin keeps that boundary clean:
 - It renders a concise workflow brief.
 - It confirms with the user once (`Start this workflow?`).
 - Only then does it proceed to configured post-run actions (for example `wf-pr_review`, `/deepwork`), or to actions declared by referenced components.
-- Lifecycle commands such as `/end-session` can also use components, for example a `cleanup` component that restores touched git repositories to the latest default branch before closing.
+- Lifecycle commands can also use components. `/start-session` can use a `repo-refresh` component for clean repository bootstrapping, and `/end-session` can use a `cleanup` component.
 
 ## Built-in vs project template packs
 
@@ -152,7 +152,7 @@ variables:
 
 The built-in `pr-review` template now stays minimal and references review components for executable behavior:
 
-- Set `components:` to `project-selector; review` (or a custom selector/review component pair).
+- Set `components:` to `project-selector; review; repo-refresh` (or a custom selector/review/repo-refresh component set).
 - `review` component values (modes, default mode, and actions) are configured in `project.md`.
 - `workflows.md` then delegates hard-coded behavior to components.
 
@@ -167,6 +167,7 @@ In `project.md`, components are declared once and can be reused by any workflow:
 ```text
 - component project-selector: concerned repository/project selector; choices: `repo-a`; `repo-b`; include cross-project: true; include free text: true
 - component review: PR review orchestration; skills/actions: wf-pr_review, pr-review-all; default mode: review-only; modes: review-only, review-and-fix, review-and-comment
+- component repo-refresh: start-session repository refresh; after start confirmation: require clean git status, switch to detected/default branch, fetch/pull latest default branch; default branch: main; applies to: selected project-selector value or current repository; skip dirty repos unless user approves stash/commit/discard
 - component cleanup: end-session repository cleanup; when git used or PR merged: fetch/pull latest default branch and leave repository on default branch; applies to: selected project-selector value; skip dirty repos unless user approves stash/commit/discard
 - component achievement: end-session achievement capture; fields: ticket/source link, PR link, repo/project, ownership, status, validation, cleanup, impact, next action
 - component message: reusable wrap-up metadata line; format: Metadata: ticket/source: <link or none>; PR: <link or none>; repo/project: <value or unknown>; status: <status>; validation: <evidence or not run>; cleanup: <status>; next: <next action or none known>
@@ -175,10 +176,10 @@ In `project.md`, components are declared once and can be reused by any workflow:
 In `workflows.md`, reference components instead of repeating lists:
 
 ```text
-- components: project-selector; review
+- components: project-selector; review; repo-refresh
 ```
 
-The `/start-session` template resolves `components:` first, then applies project defaults and asks only missing fields.
+The `/start-session` template resolves `components:` first, then applies project defaults and asks only missing fields. A `repo-refresh` component runs after Start confirmation, before workflow and component post-run actions.
 
 Lifecycle commands can resolve the same component registry. A `/end-session` workflow should use `component cleanup` when present: if git was used, commits were pushed, or a PR was merged/completed, each touched repository should be returned to the default branch and updated from remote before the session closes. Dirty working trees must not be discarded silently.
 

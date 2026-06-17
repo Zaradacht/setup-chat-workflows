@@ -5,7 +5,6 @@ description: Plan or implement a new task with focused defaults.
 variables:
   - workflow_name
   - project_label
-  - workflow_components
   - workflow_post_actions
   - source_system
 ---
@@ -14,7 +13,7 @@ variables:
 
 - enabled: true
 - purpose: Plan or implement a new task, feature, bug fix, investigation, or documentation change for {{project_label}}.
-- components: {{workflow_components}}
+- components: project-selector; repo-refresh
 - required structured questions: concerned repository/project via project-selector component unless inferable; source link/none; task goal; expected outcome
 - required input fields: none
 - optional context fields: scope boundaries; constraints; milestones; validation expectation; known risks
